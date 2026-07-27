@@ -1,0 +1,14 @@
+# 자격증명 — 절대 커밋 금지
+config/credentials.json
+
+# 파이썬
+__pycache__/
+*.pyc
+.venv/
+
+# 로그
+logs/*.log
+
+# OS
+desktop.ini
+Thumbs.db
