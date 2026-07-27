@@ -1,15 +1,16 @@
 {
   "target_movie": {
-    "title": "예시: 파묘",
-    "movie_cd": null,
+    "title": "파묘",
+    "movie_cd": "20234675",
     "release_date": "2024-02-22",
-    "target_admissions": 10000000,
-    "note": "실제 담당 영화가 아직 KOBIS에 등록되지 않아, 구조 검증용으로 넣은 예시 벤치마크 영화입니다. movie_cd는 2단계(연결 테스트)에서 KOBIS Open API로 실제 값을 조회해 채웁니다."
+    "target_admissions": 11910000,
+    "note": "실제 담당 영화가 아직 KOBIS에 등록되지 않아, 구조 검증용으로 넣은 예시(이미 완결된 벤치마크 영화)입니다. own_movie가 채워지면 이 블록을 통째로 교체하세요."
   },
   "benchmark_movies": [
     {
-      "title": "예시 벤치마크 후보 (2단계에서 실제 완결작으로 확정)",
-      "movie_cd": null
+      "title": "범죄도시4",
+      "movie_cd": "20228797",
+      "release_date": "2024-04-24"
     }
   ],
   "own_movie": {

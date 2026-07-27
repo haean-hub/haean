@@ -36,3 +36,10 @@ index.html                  대시보드 산출물 (GitHub Pages 소스)
 
 - 자격증명은 `config/credentials.json`에만 두고 절대 커밋하지 않습니다.
 - 대시보드에 올라가는 문구는 수집 데이터·공개 정보로 유추 가능한 내용만 사용합니다(내부 비공개 배급 정보 금지).
+
+## 데이터 수집 스크립트 현황
+
+- `scripts/collect_hourly.py`: 실시간 예매율(Top10, 로그인 불필요) — KOBIS 메인 페이지 공개 JSON 피드 사용.
+- `scripts/collect_daily.py`: 일별 확정 관객(Top10, 로그인 불필요) — KOBIS Open API 공식 일별 박스오피스 사용.
+- 두 스크립트 모두 대상 영화가 Top10 밖이면 `found=0`으로 기록해 수집 공백을 남긴다.
+- (보류) 순위 무관 정밀 데이터: KOBIS "일별 박스오피스" 전체 통계 페이지는 봇 방지 장치가 있어 단순 requests로는 재현 불가. 필요해지면 Playwright 기반 수집을 Phase 2로 추가.
