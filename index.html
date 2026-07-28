@@ -31,12 +31,14 @@
   .axis-label, .point-label, .legend { font-size: 10px; fill: var(--muted); }
   .point-label { font-weight: 600; fill: var(--fg); }
   .chart-empty { color: var(--muted); font-size: 0.85rem; padding: 40px 0; text-align: center; border: 1px dashed var(--border); border-radius: 8px; }
+  .hover-dot { cursor: pointer; }
+  .hover-dot:hover { fill: var(--accent); opacity: 0.2; }
   footer { color: var(--muted); font-size: 0.75rem; margin-top: 40px; }
   @media (max-width: 600px) { .hero, .comments { grid-template-columns: 1fr; } }
 </style>
 <div class="wrap">
   <h1>스파이더맨: 브랜드 뉴 데이 박스오피스 실시간 추적</h1>
-  <div class="updated">최종 갱신: 2026-07-28 12:22</div>
+  <div class="updated">최종 갱신: 2026-07-28 12:41</div>
 
   <div class="hero">
     <div class="hero-card">
@@ -65,11 +67,20 @@
   <div class="section">
     <h2>오늘 시간대별 예매 관객(개봉 전)</h2>
     <svg viewBox="0 0 640 220" class="chart-svg" role="img" aria-label="추이 차트">
-  <path d="M40.0,192.0 L113.0,191.3 L186.0,165.6 L259.0,164.6 L332.0,163.6 L405.0,87.8 L478.0,19.6 L551.0,18.0 L624.0,16.0 L624.0,192 L40.0,192 Z" fill="var(--accent)" opacity="0.12" stroke="none"></path>
-  <path d="M40.0,192.0 L113.0,191.3 L186.0,165.6 L259.0,164.6 L332.0,163.6 L405.0,87.8 L478.0,19.6 L551.0,18.0 L624.0,16.0" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></path>
+  <path d="M40.0,192.0 L234.7,163.6 L429.3,87.8 L624.0,16.0 L624.0,192 L40.0,192 Z" fill="var(--accent)" opacity="0.12" stroke="none"></path>
+  <path d="M40.0,192.0 L234.7,163.6 L429.3,87.8 L624.0,16.0" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></path>
   <circle cx="624.0" cy="16.0" r="4" fill="var(--accent)"></circle>
   <text x="624.0" y="6.0" class="point-label" text-anchor="end">745,389</text>
-  <text x="40.0" y="212" class="axis-label" text-anchor="middle">09:59</text><text x="332.0" y="212" class="axis-label" text-anchor="middle">10:19</text><text x="624.0" y="212" class="axis-label" text-anchor="middle">12:22</text>
+  <text x="40.0" y="212" class="axis-label" text-anchor="middle">09:00-10:00</text><text x="429.3" y="212" class="axis-label" text-anchor="middle">11:00-12:00</text><text x="624.0" y="212" class="axis-label" text-anchor="middle">12:00-13:00</text>
+  <circle cx="40.0" cy="192.0" r="10" fill="transparent" class="hover-dot"><title>09:00-10:00
+727,139명
+직전 시간 데이터 없음</title></circle><circle cx="234.7" cy="163.6" r="10" fill="transparent" class="hover-dot"><title>10:00-11:00
+730,084명
+직전 시간 대비 +2,945명</title></circle><circle cx="429.3" cy="87.8" r="10" fill="transparent" class="hover-dot"><title>11:00-12:00
+737,948명
+직전 시간 대비 +7,864명</title></circle><circle cx="624.0" cy="16.0" r="10" fill="transparent" class="hover-dot"><title>12:00-13:00
+745,389명
+직전 시간 대비 +7,441명</title></circle>
 </svg>
   </div>
 

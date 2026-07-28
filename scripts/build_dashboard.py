@@ -45,9 +45,44 @@ def fmt_num(n) -> str:
     return f"{n:,.0f}"
 
 
-def svg_line_chart(series: list, width=640, height=220, color="var(--accent)", value_fmt=fmt_num) -> str:
-    """series: [(label, value), ...]. 값이 없으면 빈 차트 안내를 그린다."""
-    pts = [(l, v) for l, v in series if v is not None]
+def hour_bucket_series(rows: list, metric: str) -> tuple:
+    """수집분을 1시간 단위(예: 10:00-11:00)로 묶어, 그 시간대 마지막 값을 대표값으로 쓴다.
+    반환: (series[(label, value)], tooltips[str]) — 툴팁엔 직전 시간 대비 증감을 함께 담는다.
+    """
+    buckets = {}
+    for h in rows:
+        key = h["ts"].replace(minute=0, second=0, microsecond=0)
+        buckets[key] = h  # 같은 시간대 내 마지막 수집분으로 덮어씀
+    keys = sorted(buckets)
+
+    series, tooltips, prev_val = [], [], None
+    for k in keys:
+        val = buckets[k][metric]
+        label = f"{k.hour:02d}:00-{(k.hour + 1) % 24:02d}:00"
+        if prev_val is not None and val is not None:
+            d = val - prev_val
+            sign = "+" if d >= 0 else ""
+            delta_txt = f"직전 시간 대비 {sign}{d:,}명"
+        else:
+            delta_txt = "직전 시간 데이터 없음"
+        val_txt = f"{val:,}명" if val is not None else "-"
+        tooltips.append(f"{label}\n{val_txt}\n{delta_txt}")
+        series.append((label, val))
+        if val is not None:
+            prev_val = val
+    return series, tooltips
+
+
+def html_escape(s: str) -> str:
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def svg_line_chart(series: list, width=640, height=220, color="var(--accent)", value_fmt=fmt_num,
+                    tooltips: list = None) -> str:
+    """series: [(label, value), ...]. tooltips가 주어지면 각 점에 마우스오버 시 표시(SVG <title>, JS 불필요)."""
+    pts_all = [(i, l, v) for i, (l, v) in enumerate(series) if v is not None]
+    pts = [(l, v) for _, l, v in pts_all]
+    tip_by_pt = [tooltips[i] for i, _, _ in pts_all] if tooltips else None
     if len(pts) < 2:
         return f'<div class="chart-empty">데이터가 아직 충분하지 않습니다 ({len(pts)}건)</div>'
 
@@ -78,12 +113,22 @@ def svg_line_chart(series: list, width=640, height=220, color="var(--accent)", v
     )
 
     last_label, last_val = pts[-1]
+
+    hover_points_svg = ""
+    if tip_by_pt:
+        hover_points_svg = "".join(
+            f'<circle cx="{x_of(i):.1f}" cy="{y_of(v):.1f}" r="10" fill="transparent" class="hover-dot">'
+            f'<title>{html_escape(tip_by_pt[i])}</title></circle>'
+            for i, (_, v) in enumerate(pts)
+        )
+
     return f'''<svg viewBox="0 0 {width} {height}" class="chart-svg" role="img" aria-label="추이 차트">
   <path d="{area_d}" fill="{color}" opacity="0.12" stroke="none"></path>
   <path d="{path_d}" fill="none" stroke="{color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></path>
   <circle cx="{x_of(len(pts)-1):.1f}" cy="{y_of(last_val):.1f}" r="4" fill="{color}"></circle>
   <text x="{x_of(len(pts)-1):.1f}" y="{y_of(last_val)-10:.1f}" class="point-label" text-anchor="end">{value_fmt(last_val)}</text>
   {labels_svg}
+  {hover_points_svg}
 </svg>'''
 
 
@@ -147,7 +192,7 @@ def build() -> None:
     released_today = any((h["cum_audi"] or 0) > 0 for h in hourly_today)
     hourly_metric = "cum_audi" if released_today else "reservation_audi"
     hourly_chart_title = "오늘 시간대별 누적 관객(실제 입장)" if released_today else "오늘 시간대별 예매 관객(개봉 전)"
-    hourly_series = [(h["ts"].strftime("%H:%M"), h[hourly_metric]) for h in hourly_today]
+    hourly_series, hourly_tooltips = hour_bucket_series(hourly_today, hourly_metric)
     avg_per_show_series = [
         (r["date"].strftime("%m/%d"), (r["daily_audi"] / r["show_cnt"]) if r["show_cnt"] else None)
         for r in daily_series
@@ -219,6 +264,8 @@ def build() -> None:
   .axis-label, .point-label, .legend {{ font-size: 10px; fill: var(--muted); }}
   .point-label {{ font-weight: 600; fill: var(--fg); }}
   .chart-empty {{ color: var(--muted); font-size: 0.85rem; padding: 40px 0; text-align: center; border: 1px dashed var(--border); border-radius: 8px; }}
+  .hover-dot {{ cursor: pointer; }}
+  .hover-dot:hover {{ fill: var(--accent); opacity: 0.2; }}
   footer {{ color: var(--muted); font-size: 0.75rem; margin-top: 40px; }}
   @media (max-width: 600px) {{ .hero, .comments {{ grid-template-columns: 1fr; }} }}
 </style>
@@ -252,7 +299,7 @@ def build() -> None:
 
   <div class="section">
     <h2>{hourly_chart_title}</h2>
-    {svg_line_chart(hourly_series)}
+    {svg_line_chart(hourly_series, tooltips=hourly_tooltips)}
   </div>
 
   <div class="section">
