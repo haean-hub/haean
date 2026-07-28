@@ -16,7 +16,7 @@
   .wrap { max-width: 920px; margin: 0 auto; }
   h1 { font-size: 1.4rem; margin: 0 0 4px; }
   .updated { color: var(--muted); font-size: 0.85rem; margin-bottom: 24px; }
-  .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+  .hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 28px; }
   .hero-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
   .hero-label { color: var(--muted); font-size: 0.85rem; margin-bottom: 6px; }
   .hero-value { font-size: 1.9rem; font-weight: 700; }
@@ -36,9 +36,14 @@
 </style>
 <div class="wrap">
   <h1>스파이더맨: 브랜드 뉴 데이 박스오피스 실시간 추적</h1>
-  <div class="updated">최종 갱신: 2026-07-28 12:19</div>
+  <div class="updated">최종 갱신: 2026-07-28 12:21</div>
 
   <div class="hero">
+    <div class="hero-card">
+      <div class="hero-label">현재 총 예매량</div>
+      <div class="hero-value">745,177명</div>
+      <div class="hero-sub">12:20 기준 · 직전 1분간 +161명</div>
+    </div>
     <div class="hero-card">
       <div class="hero-label">오늘 최종 관객 예측</div>
       <div class="hero-value">-명</div>
@@ -60,11 +65,11 @@
   <div class="section">
     <h2>오늘 시간대별 예매 관객(개봉 전)</h2>
     <svg viewBox="0 0 640 220" class="chart-svg" role="img" aria-label="추이 차트">
-  <path d="M40.0,192.0 L137.3,191.3 L234.7,165.1 L332.0,164.0 L429.3,163.0 L526.7,85.6 L624.0,16.0 L624.0,192 L40.0,192 Z" fill="var(--accent)" opacity="0.12" stroke="none"></path>
-  <path d="M40.0,192.0 L137.3,191.3 L234.7,165.1 L332.0,164.0 L429.3,163.0 L526.7,85.6 L624.0,16.0" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></path>
+  <path d="M40.0,192.0 L123.4,191.3 L206.9,165.3 L290.3,164.3 L373.7,163.3 L457.1,86.5 L540.6,17.6 L624.0,16.0 L624.0,192 L40.0,192 Z" fill="var(--accent)" opacity="0.12" stroke="none"></path>
+  <path d="M40.0,192.0 L123.4,191.3 L206.9,165.3 L290.3,164.3 L373.7,163.3 L457.1,86.5 L540.6,17.6 L624.0,16.0" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></path>
   <circle cx="624.0" cy="16.0" r="4" fill="var(--accent)"></circle>
-  <text x="624.0" y="6.0" class="point-label" text-anchor="end">745,016</text>
-  <text x="40.0" y="212" class="axis-label" text-anchor="middle">09:59</text><text x="332.0" y="212" class="axis-label" text-anchor="middle">10:18</text><text x="624.0" y="212" class="axis-label" text-anchor="middle">12:19</text>
+  <text x="624.0" y="6.0" class="point-label" text-anchor="end">745,177</text>
+  <text x="40.0" y="212" class="axis-label" text-anchor="middle">09:59</text><text x="373.7" y="212" class="axis-label" text-anchor="middle">10:19</text><text x="624.0" y="212" class="axis-label" text-anchor="middle">12:20</text>
 </svg>
   </div>
 

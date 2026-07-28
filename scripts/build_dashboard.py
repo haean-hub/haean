@@ -10,6 +10,7 @@ from pathlib import Path
 from predict import (
     BENCHMARK_HISTORY, MEMBER_SNAPSHOTS, HOURLY,
     load_daily_series, load_hourly_series, predict_today_final, predict_opening_final,
+    latest_hourly_snapshot,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -170,6 +171,19 @@ def build() -> None:
         pct = final_pred["predicted_final"] / target["target_admissions"] * 100
         target_pct = f'<div class="hero-sub">목표 {fmt_num(target["target_admissions"])}명 대비 {pct:.0f}%</div>'
 
+    latest_snapshot = latest_hourly_snapshot(movie_cd)
+    hero_reservation = fmt_num(latest_snapshot["reservation_audi"]) if latest_snapshot else "-"
+    reservation_sub = ""
+    if latest_snapshot:
+        as_of = latest_snapshot["collected_at"].strftime("%H:%M")
+        delta = latest_snapshot["reservation_audi_delta"]
+        mins = latest_snapshot["minutes_since_prev"]
+        if delta is not None and mins:
+            sign = "+" if delta >= 0 else ""
+            reservation_sub = f'<div class="hero-sub">{as_of} 기준 · 직전 {mins}분간 {sign}{delta:,}명</div>'
+        else:
+            reservation_sub = f'<div class="hero-sub">{as_of} 기준</div>'
+
     generated_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
     html = f'''<meta charset="utf-8">
@@ -190,7 +204,7 @@ def build() -> None:
   .wrap {{ max-width: 920px; margin: 0 auto; }}
   h1 {{ font-size: 1.4rem; margin: 0 0 4px; }}
   .updated {{ color: var(--muted); font-size: 0.85rem; margin-bottom: 24px; }}
-  .hero {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }}
+  .hero {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 28px; }}
   .hero-card {{ background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }}
   .hero-label {{ color: var(--muted); font-size: 0.85rem; margin-bottom: 6px; }}
   .hero-value {{ font-size: 1.9rem; font-weight: 700; }}
@@ -213,6 +227,11 @@ def build() -> None:
   <div class="updated">최종 갱신: {generated_at}</div>
 
   <div class="hero">
+    <div class="hero-card">
+      <div class="hero-label">현재 총 예매량</div>
+      <div class="hero-value">{hero_reservation}명</div>
+      {reservation_sub}
+    </div>
     <div class="hero-card">
       <div class="hero-label">오늘 최종 관객 예측</div>
       <div class="hero-value">{hero_today}명</div>

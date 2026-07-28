@@ -21,6 +21,7 @@ FIELDS = [
     "collected_at", "movie_cd", "movie_nm", "found", "rank",
     "reservation_rate", "reservation_audi", "reservation_sales",
     "cum_audi", "cum_sales",
+    "reservation_audi_delta", "minutes_since_prev",
 ]
 
 
@@ -57,6 +58,18 @@ def log(msg: str) -> None:
         f.write(f"{datetime.datetime.now().isoformat()} {msg}\n")
 
 
+def get_last_row(movie_cd: str) -> dict | None:
+    """movie_cd의 가장 최근 found=1 행(직전 수집분)을 반환. 증감 계산용."""
+    if not DATA_PATH.exists():
+        return None
+    last = None
+    with open(DATA_PATH, encoding="utf-8-sig", newline="") as f:
+        for row in csv.DictReader(f):
+            if row.get("movie_cd") == movie_cd and row.get("found") == "1":
+                last = row
+    return last
+
+
 def append_row(row: dict) -> None:
     is_new = not DATA_PATH.exists()
     DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -79,6 +92,17 @@ def main() -> None:
         return
 
     match = next((m for m in items if m.get("movieCd") == movie_cd), None)
+    last_row = get_last_row(movie_cd)
+    delta = ""
+    minutes_since_prev = ""
+    if match and last_row and last_row.get("reservation_audi"):
+        prev_audi = int(last_row["reservation_audi"])
+        cur_audi = int(match.get("audiCnt") or 0)
+        delta = cur_audi - prev_audi
+        prev_ts = datetime.datetime.fromisoformat(last_row["collected_at"])
+        cur_ts = datetime.datetime.fromisoformat(now)
+        minutes_since_prev = round((cur_ts - prev_ts).total_seconds() / 60)
+
     if match:
         row = {
             "collected_at": now,
@@ -91,8 +115,10 @@ def main() -> None:
             "reservation_sales": match.get("salesAmt"),
             "cum_audi": match.get("totalAudiCnt"),
             "cum_sales": match.get("totalSalesAmt"),
+            "reservation_audi_delta": delta,
+            "minutes_since_prev": minutes_since_prev,
         }
-        log(f"OK rank={match.get('rank')} rate={match.get('totIssuCntRatio')}")
+        log(f"OK rank={match.get('rank')} rate={match.get('totIssuCntRatio')} delta={delta}")
     else:
         row = {
             "collected_at": now,
@@ -105,6 +131,8 @@ def main() -> None:
             "reservation_sales": "",
             "cum_audi": "",
             "cum_sales": "",
+            "reservation_audi_delta": "",
+            "minutes_since_prev": "",
         }
         log("WARN movie not in realtime top10")
 

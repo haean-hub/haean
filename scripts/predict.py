@@ -81,6 +81,26 @@ def load_hourly_series(movie_cd: str, on_date: datetime.date) -> list:
     return sorted(rows, key=lambda r: r["ts"])
 
 
+def latest_hourly_snapshot(movie_cd: str) -> dict | None:
+    """가장 최근 found=1 실시간 예매 스냅샷(날짜 무관). 총 예매량/직전 대비 증감 표시용."""
+    if not HOURLY.exists():
+        return None
+    last = None
+    with open(HOURLY, encoding="utf-8-sig", newline="") as f:
+        for row in csv.DictReader(f):
+            if row.get("movie_cd") != movie_cd or row.get("found") != "1":
+                continue
+            last = row
+    if not last:
+        return None
+    return {
+        "collected_at": datetime.datetime.fromisoformat(last["collected_at"]),
+        "reservation_audi": _to_int(last.get("reservation_audi")),
+        "reservation_audi_delta": _to_int(last.get("reservation_audi_delta")),
+        "minutes_since_prev": _to_int(last.get("minutes_since_prev")),
+    }
+
+
 def find_same_day_type_before(series: list, target_date: datetime.date, dtype: str, weeks_back: int = 1):
     """target_date 이전, 같은 요일유형인 날짜 중 가장 가까운 것 (기본: 지난주 같은 요일)."""
     candidates = [r for r in series if r["date"] < target_date and day_type(r["date"]) == dtype]
