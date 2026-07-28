@@ -4,6 +4,7 @@
 상영관 통계 로그인 스크래핑은 별도 모듈(collect_hourly.py, collect_daily.py)에서 처리한다.
 """
 import json
+import time
 import urllib.request
 import urllib.parse
 from pathlib import Path
@@ -27,8 +28,16 @@ def _get(path: str, params: dict) -> dict:
     key = load_api_key()
     params = {"key": key, **params}
     url = f"{BASE_URL}/{path}?{urllib.parse.urlencode(params)}"
-    with urllib.request.urlopen(url, timeout=15) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    last_err = None
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(url, timeout=15) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except Exception as e:
+            last_err = e
+            if attempt < 2:
+                time.sleep(3 * (attempt + 1))
+    raise last_err
 
 
 def search_movie_list(movie_nm: str) -> list:

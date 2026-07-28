@@ -75,6 +75,7 @@ def load_hourly_series(movie_cd: str, on_date: datetime.date) -> list:
             rows.append({
                 "ts": ts,
                 "cum_audi": _to_int(row.get("cum_audi")),
+                "reservation_audi": _to_int(row.get("reservation_audi")),
                 "reservation_rate": float(row["reservation_rate"]) if row.get("reservation_rate") else 0.0,
             })
     return sorted(rows, key=lambda r: r["ts"])

@@ -142,7 +142,11 @@ def build() -> None:
 
     # 차트용 데이터
     cum_series = [(r["date"].strftime("%m/%d"), r["cum_audi"]) for r in daily_series]
-    hourly_series = [(h["ts"].strftime("%H:%M"), h["cum_audi"]) for h in hourly_today]
+    # 개봉 전(cum_audi=0)에는 예매관객으로, 개봉 후에는 실제 누적관객으로 오늘 추이를 보여준다
+    released_today = any((h["cum_audi"] or 0) > 0 for h in hourly_today)
+    hourly_metric = "cum_audi" if released_today else "reservation_audi"
+    hourly_chart_title = "오늘 시간대별 누적 관객(실제 입장)" if released_today else "오늘 시간대별 예매 관객(개봉 전)"
+    hourly_series = [(h["ts"].strftime("%H:%M"), h[hourly_metric]) for h in hourly_today]
     avg_per_show_series = [
         (r["date"].strftime("%m/%d"), (r["daily_audi"] / r["show_cnt"]) if r["show_cnt"] else None)
         for r in daily_series
@@ -228,7 +232,7 @@ def build() -> None:
   </div>
 
   <div class="section">
-    <h2>오늘 시간대별 누적 관객(실시간 예매)</h2>
+    <h2>{hourly_chart_title}</h2>
     {svg_line_chart(hourly_series)}
   </div>
 

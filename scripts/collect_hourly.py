@@ -6,6 +6,7 @@ KOBIS 메인 페이지가 쓰는 공개 JSON 피드(searchMainRealTicket.do)를 
 import csv
 import datetime
 import json
+import time
 import urllib.request
 from pathlib import Path
 
@@ -38,8 +39,16 @@ def fetch_realtime() -> list:
             "Referer": "https://www.kobis.or.kr/kobis/business/main/main.do",
         },
     )
-    with urllib.request.urlopen(req, timeout=15) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    last_err = None
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except Exception as e:
+            last_err = e
+            if attempt < 2:
+                time.sleep(3 * (attempt + 1))
+    raise last_err
 
 
 def log(msg: str) -> None:
