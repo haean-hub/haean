@@ -1,7 +1,12 @@
 """market_seat_history.csv에서 '개봉 1주일(offset 0~6)이 이미 지났는데 평균 좌석판매율이
 8% 미만인 영화'를 원본 데이터에서 자동으로 제거한다.
 
-- 개봉 후 1주일이 아직 안 지난 영화(=offset 6까지 데이터가 없는 영화)는 판단 보류하고 그대로 둔다.
+- "1주일이 지났다"는 우리가 갖고 있는 데이터의 최대 경과일이 아니라, 개봉일로부터
+  달력상 실제로 6일 이상 지났는지로 판단한다. 예: 1월 초 개봉해서 딱 하루 상영하고
+  사라진 영화는 영원히 offset 6 데이터가 안 생기지만, 지금 시점(오늘)엔 이미 몇 달이
+  지났으므로 그 하루치 데이터만으로라도 판정해야 한다(그래야 이런 케이스가 영원히
+  "판정 보류"로 남아 곡선을 오염시키는 걸 막는다).
+- 정말로 최근에 개봉해서 달력상으로도 아직 1주일이 안 지난 영화만 판단을 보류한다.
 - 이 스크립트는 scrape_seat_history.py 실행 끝에서 자동으로 호출된다(수집할 때마다 자동 정리).
 """
 import csv
@@ -31,13 +36,15 @@ def prune() -> dict:
         fieldnames = list(rows[0].keys()) if rows else []
 
     by_movie = defaultdict(list)
+    open_dt_map = {}
     for r in rows:
         by_movie[r["movie_cd"]].append(r)
 
+    today = datetime.date.today()
     to_remove = set()
     for movie_cd, movie_rows in by_movie.items():
-        offsets = set()
         first_week_vals = []
+        open_dt = None
         for r in movie_rows:
             try:
                 d = datetime.datetime.strptime(r["date"], "%Y%m%d").date()
@@ -45,13 +52,13 @@ def prune() -> dict:
             except ValueError:
                 continue
             offset = (d - open_dt).days
-            offsets.add(offset)
             if 0 <= offset <= 6 and r.get("seat_sell_ratio_pct"):
                 first_week_vals.append(float(r["seat_sell_ratio_pct"]))
 
-        week_elapsed = max(offsets, default=-1) >= 6
+        # 달력상 개봉일로부터 6일 이상 지났으면 "1주일 경과"로 본다(상영일수가 아니라 경과일 기준).
+        week_elapsed = open_dt is not None and (today - open_dt).days >= 6
         if not week_elapsed:
-            continue  # 아직 1주일 안 지남 -> 판단 보류
+            continue  # 아직 (달력상으로도) 1주일 안 지남 -> 판단 보류
 
         if not first_week_vals:
             continue  # 1주일은 지났지만 첫주 데이터 자체가 없음 -> 판단 불가, 보류

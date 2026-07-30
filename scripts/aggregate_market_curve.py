@@ -11,10 +11,15 @@
   1) 2026-01-01 이후 개봉작만
   2) 영화구분 전체(일반영화 + 독립·예술영화)
   3) 좌석판매율 사용
-  4) 개봉 1주차(day_offset 0~6)가 이미 다 지난 영화만 판정 대상으로 하고,
-     그 평균이 9% 미만이면 제외. 아직 1주일이 안 지난 최신 영화는 판정 보류(제외하지 않음).
-     주: market_seat_history.csv는 prune_low_performers.py가 이미 확정 제외 대상을
-     물리적으로 삭제해두므로, 여기서는 남아있는 데이터를 그대로 다 쓰면 된다.
+  4) 개봉일로부터 달력상 6일 이상 지난(=1주일 경과) 영화만 판정 대상으로 하고,
+     1주차 평균이 9% 미만이면 제외. 아직 달력상으로도 1주일이 안 지난 진짜 최신작만
+     판정 보류. ("우리가 갖고 있는 데이터의 최대 경과일"이 아니라 실제 달력 기준으로
+     판단 — 그래야 1월에 개봉해서 하루만 상영하고 사라진 영화가 영원히 "보류" 상태로
+     남아 곡선을 오염시키는 걸 막는다.)
+
+곡선 계산에는 확정 포함된 영화만 반영한다(판정 보류작은 아직 곡선에 넣지 않음 — 나중에
+확정되면 그때 반영됨). market_seat_history.csv 자체는 prune_low_performers.py가
+확정 제외 대상만 물리적으로 삭제하고, 보류작은 계속 원본에 남겨둔다.
 
 결과는 data/market_seat_sell_curve.json 에 저장.
 """
@@ -74,6 +79,7 @@ def load_by_movie() -> dict:
 
 def build() -> dict:
     by_movie = load_by_movie()
+    today = datetime.date.today()
 
     # (offset, day_type) -> [values]
     by_bucket = defaultdict(list)
@@ -84,25 +90,31 @@ def build() -> dict:
 
     for movie_cd, rows in by_movie.items():
         by_offset = defaultdict(list)
+        open_dt = None
         for r in rows:
             by_offset[r["offset"]].append(r)
+            if open_dt is None or r["date"] - datetime.timedelta(days=r["offset"]) == open_dt:
+                open_dt = r["date"] - datetime.timedelta(days=r["offset"])
 
-        week_elapsed = max(by_offset.keys(), default=-1) >= 6
+        # 달력상 개봉일로부터 6일 이상 지났는지로 "1주일 경과"를 판단한다(상영일수 기준 아님).
+        week_elapsed = open_dt is not None and (today - open_dt).days >= 6
         first_week_vals = [r["seat_sell"] for o in range(7) if o in by_offset for r in by_offset[o]]
 
-        if week_elapsed:
-            if not first_week_vals:
-                pending += 1
-                continue
-            avg_first_week = sum(first_week_vals) / len(first_week_vals)
-            if avg_first_week < MIN_FIRST_WEEK_SEAT_SELL_PCT:
-                excluded += 1
-                continue
-            included += 1
-        else:
-            pending += 1  # 1주일 안 지남: 제외는 안 하되, 판정 보류 상태 표시용 카운트만
+        if not week_elapsed:
+            pending += 1
+            continue  # 진짜 최신작만 보류. 확정 전이라 곡선 계산엔 아직 반영하지 않는다.
 
-        # 판정 보류(아직 1주 안 지남) 영화도 지금까지 쌓인 데이터는 그대로 집계에 반영한다.
+        if not first_week_vals:
+            pending += 1
+            continue
+
+        avg_first_week = sum(first_week_vals) / len(first_week_vals)
+        if avg_first_week < MIN_FIRST_WEEK_SEAT_SELL_PCT:
+            excluded += 1
+            continue
+        included += 1
+
+        # 확정 포함된 영화만 곡선 계산에 반영한다(판정 보류작은 곡선을 오염시키지 않도록 제외).
         for offset, day_rows in by_offset.items():
             for r in day_rows:
                 dtype = day_type(r["date"])
