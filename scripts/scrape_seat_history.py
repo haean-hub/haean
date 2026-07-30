@@ -16,6 +16,26 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
+
+def wait_for_stable_rows(page, max_wait_ms=12000, check_interval_ms=500, stable_checks=3):
+    """행이 다 로딩될 때까지 기다린다(고정 대기시간 대신, 개수가 더 안 늘어날 때까지 폴링).
+    고정 0.8초 대기로는 100개 넘는 행이 다 채워지기 전에 읽어버려 데이터 누락이 발생했었다."""
+    last_count = -1
+    stable = 0
+    elapsed = 0
+    while elapsed < max_wait_ms:
+        page.wait_for_timeout(check_interval_ms)
+        elapsed += check_interval_ms
+        cur = page.eval_on_selector_all("table tbody tr", "els => els.length")
+        if cur == last_count and cur > 0:
+            stable += 1
+            if stable >= stable_checks:
+                return cur
+        else:
+            stable = 0
+        last_count = cur
+    return last_count
+
 ROOT = Path(__file__).resolve().parent.parent
 DATA_PATH = ROOT / "data" / "market_seat_history.csv"
 LOG_PATH = ROOT / "logs" / "scrape_seat_history.log"
@@ -142,7 +162,7 @@ def scrape_range(start: datetime.date, end: datetime.date) -> None:
             try:
                 with page.expect_navigation(wait_until="networkidle", timeout=30000):
                     page.evaluate('chkform("search")')
-                page.wait_for_timeout(800)
+                wait_for_stable_rows(page)
                 rows = extract_week(page)
                 new_rows = [r for r in rows if r["date"] not in have]
                 append_rows(new_rows)

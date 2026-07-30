@@ -13,6 +13,10 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from scrape_seat_history import wait_for_stable_rows  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = ROOT / "config" / "film_config.json"
 DATA_PATH = ROOT / "data" / "own_seat_daily.csv"
@@ -58,7 +62,7 @@ def fetch_last_week_rows() -> list:
         page.evaluate('document.querySelector("select[name=searchType]").value = "2"')
         with page.expect_navigation(wait_until="networkidle", timeout=30000):
             page.evaluate('chkform("search")')
-        page.wait_for_timeout(800)
+        wait_for_stable_rows(page)
         data = page.evaluate(
             """
             () => {
