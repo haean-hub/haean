@@ -11,7 +11,7 @@ from pathlib import Path
 from predict import (
     BENCHMARK_HISTORY, MEMBER_SNAPSHOTS, HOURLY,
     load_daily_series, load_hourly_series, predict_today_final, predict_opening_final,
-    latest_hourly_snapshot,
+    latest_hourly_snapshot, market_reference_today,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -304,6 +304,19 @@ def build() -> None:
         pct = final_pred["predicted_final"] / target["target_admissions"] * 100
         target_pct = f'<div class="hero-sub">목표 {fmt_num(target["target_admissions"])}명 대비 {pct:.0f}%</div>'
 
+    market_ref = market_reference_today(movie_cd, release_date, today)
+    hero_market_ref = fmt_num(market_ref["predicted"]) if market_ref["predicted"] else "-"
+    market_ref_sub = ""
+    if market_ref["predicted"]:
+        market_ref_sub = (
+            f'<div class="hero-sub">경과 {market_ref["day_offset"]}일차 · '
+            f'좌석수 {fmt_num(market_ref["seat_cnt"])} × 평균 {market_ref["market_avg_seat_sell_pct"]}%</div>'
+        )
+    elif market_ref["day_offset"] < 0:
+        market_ref_sub = '<div class="hero-sub">개봉 전에는 계산되지 않습니다</div>'
+    else:
+        market_ref_sub = '<div class="hero-sub">오늘 좌석수 확정 전(하루 마감 후 반영)</div>'
+
     latest_snapshot = latest_hourly_snapshot(movie_cd)
     hero_reservation = fmt_num(latest_snapshot["reservation_audi"]) if latest_snapshot else "-"
     reservation_sub = ""
@@ -418,6 +431,7 @@ def build() -> None:
     background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px;
     padding: 20px 22px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   }}
+  .hero-card--reference {{ border-style: dashed; }}
   .hero-label {{ color: var(--text-secondary); font-size: 0.83rem; margin-bottom: 8px; }}
   .hero-value {{ font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }}
   .hero-sub {{ color: var(--text-muted); font-size: 0.8rem; margin-top: 6px; }}
@@ -485,6 +499,11 @@ def build() -> None:
       <div class="hero-label">개봉 최종 총관객 전망</div>
       <div class="hero-value">{hero_final}명</div>
       {target_pct}
+    </div>
+    <div class="hero-card hero-card--reference">
+      <div class="hero-label">오늘 최종 관객(2026년 평균 기준)</div>
+      <div class="hero-value">{hero_market_ref}명</div>
+      {market_ref_sub}
     </div>
   </div>
 
