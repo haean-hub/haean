@@ -13,5 +13,10 @@
       "release_date": "2021-12-15"
     }
   ],
-  "competitor_movies": []
+  "competitor_movies": [
+    { "title": "비광", "movie_cd": "20204641", "release_date": "2026-09-02" },
+    { "title": "싱 어게인", "movie_cd": "20264918", "release_date": "2026-09-02" },
+    { "title": "옵세션", "movie_cd": "20265146", "release_date": "2026-09-02" },
+    { "title": "딥 워터", "movie_cd": "20264915", "release_date": "2026-09-09" }
+  ]
 }
