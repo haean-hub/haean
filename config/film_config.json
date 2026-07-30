@@ -3,8 +3,8 @@
     "title": "퓨리어스",
     "movie_cd": "20265486",
     "release_date": "2026-09-09",
-    "target_admissions": 1000000,
-    "note": "실제 담당 영화. KOBIS DB에 개봉일이 아직 업데이트되지 않아 release_date는 예상치(9/9)로 임시 설정 — 실제 개봉일 확정되면 반드시 수정할 것. target_admissions도 임의 설정치."
+    "target_admissions": 100000,
+    "note": "실제 담당 영화. KOBIS DB에 개봉일이 아직 업데이트되지 않아 release_date는 예상치(9/9)로 임시 설정 — 실제 개봉일 확정되면 반드시 수정할 것. 벤치마크(현재 스파이더맨: 노 웨이 홈)는 임시값이며 사용자가 직접 지정할 예정."
   },
   "benchmark_movies": [
     {
