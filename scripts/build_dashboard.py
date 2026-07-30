@@ -473,7 +473,7 @@ def build() -> None:
 
   <div class="hero">
     <div class="hero-card">
-      <div class="hero-label">현재 총 예매량</div>
+      <div class="hero-label">예매관객수</div>
       <div class="hero-value">{hero_reservation}명</div>
       {reservation_sub}
     </div>
