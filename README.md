@@ -4,7 +4,7 @@ KOBIS 데이터로 특정 영화의 예매량·일일 관객·좌석판매율을
 
 ## 현재 상태
 
-담당 영화가 아직 KOBIS에 등록되지 않아, `config/film_config.json`의 `target_movie`에는 구조 검증용 예시 벤치마크 영화가 들어가 있습니다. 담당 영화가 KOBIS에 movie_cd로 등록되면 `own_movie` 블록을 채운 뒤 `target_movie`와 교체하세요.
+`config/film_config.json`의 `target_movie`는 실제 담당 영화(퓨리어스, KOBIS movieCd 20265486)입니다. 개봉일은 KOBIS DB 미확정으로 예상치(9/9)를 임시로 넣어뒀으니 확정되면 수정하세요. `benchmark_movies`(예측용 감쇠율 비교 기준)는 사용자가 직접 지정할 예정이며, `competitor_movies`(단순 비교 표시용, 실시간 예매율+누적관객수만 수집)는 필요할 때 채우면 됩니다.
 
 ## 폴더 구조
 
@@ -14,15 +14,19 @@ config/
   credentials.example.json  자격증명 입력 템플릿 (커밋됨)
   credentials.json          실제 KOBIS API키·로그인 (gitignore, 직접 생성 필요)
 data/
-  hourly.csv                실시간 예매 수집 결과
-  member_snapshots.csv      정밀 일별 관객 수집 결과 (로그인 필요)
-  schedule_history.json     (선택) 편성표
+  hourly.csv                대상 영화 실시간 예매 수집 결과
+  member_snapshots.csv      대상 영화 일별 확정 관객 수집 결과
+  benchmark_history.csv     벤치마크 영화 백필 데이터 (예측용)
+  competitors.csv           경쟁작 실시간 예매율/누적관객수 수집 결과
 scripts/
   kobis_client.py           KOBIS Open API 공통 클라이언트
-  collect_hourly.py         실시간 예매 수집
-  collect_daily.py          상영관 통계(로그인) 수집
+  collect_hourly.py         대상 영화 실시간 예매 수집
+  collect_daily.py          대상 영화 일별 확정 관객 수집
+  collect_competitors.py    경쟁작(competitor_movies) 실시간 예매율+누적관객수 수집
+  backfill_history.py       벤치마크 영화 과거 데이터 일괄 백필
   predict.py                예측 로직 (5개 가드 포함)
   build_dashboard.py        index.html 생성
+  run_cycle.ps1              매시간 자동실행용 수집+빌드+push 래퍼(작업 스케줄러 등록됨)
 index.html                  대시보드 산출물 (GitHub Pages 소스)
 ```
 
@@ -39,7 +43,8 @@ index.html                  대시보드 산출물 (GitHub Pages 소스)
 
 ## 데이터 수집 스크립트 현황
 
-- `scripts/collect_hourly.py`: 실시간 예매율(Top10, 로그인 불필요) — KOBIS 메인 페이지 공개 JSON 피드 사용.
-- `scripts/collect_daily.py`: 일별 확정 관객(Top10, 로그인 불필요) — KOBIS Open API 공식 일별 박스오피스 사용.
-- 두 스크립트 모두 대상 영화가 Top10 밖이면 `found=0`으로 기록해 수집 공백을 남긴다.
+- `scripts/collect_hourly.py`: 대상 영화 실시간 예매율(Top10, 로그인 불필요) — KOBIS 메인 페이지 공개 JSON 피드 사용. 총 예매량과 직전 수집 대비 증감(`reservation_audi_delta`)도 함께 기록.
+- `scripts/collect_daily.py`: 대상 영화 일별 확정 관객(Top10, 로그인 불필요) — KOBIS Open API 공식 일별 박스오피스 사용.
+- `scripts/collect_competitors.py`: 경쟁작(`competitor_movies`) 실시간 예매율 + 누적관객수만 수집 — collect_hourly.py와 같은 공개 피드를 재사용. 목록이 비어 있으면 아무 것도 하지 않고 종료.
+- 세 스크립트 모두 대상이 Top10 밖이면 `found=0`으로 기록해 수집 공백을 남긴다.
 - (보류) 순위 무관 정밀 데이터: KOBIS "일별 박스오피스" 전체 통계 페이지는 봇 방지 장치가 있어 단순 requests로는 재현 불가. 필요해지면 Playwright 기반 수집을 Phase 2로 추가.
