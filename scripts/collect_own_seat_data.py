@@ -79,8 +79,8 @@ def fetch_last_week_rows() -> list:
                     current.rows.push({
                       movie_cd: movieCd,
                       movie_nm: tds[1].textContent.trim(),
-                      seat_occupancy_pct: tds[3].textContent.trim().replace('%',''),
-                      seat_sell_ratio_pct: tds[4].textContent.trim().replace('%',''),
+                      seat_sell_ratio_pct: tds[3].textContent.trim().replace('%',''),
+                      seat_occupancy_pct: tds[4].textContent.trim().replace('%',''),
                       seat_cnt: tds[5].textContent.trim().replace(/,/g,''),
                       audi_cnt: tds[8].textContent.trim().replace(/,/g,''),
                     });
