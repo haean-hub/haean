@@ -22,9 +22,6 @@ Write-Log "collect_daily.py exit=$LASTEXITCODE"
 python scripts\collect_competitors.py
 Write-Log "collect_competitors.py exit=$LASTEXITCODE"
 
-python scripts\collect_own_seat_data.py
-Write-Log "collect_own_seat_data.py exit=$LASTEXITCODE"
-
 python scripts\build_dashboard.py
 Write-Log "build_dashboard.py exit=$LASTEXITCODE"
 

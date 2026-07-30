@@ -16,8 +16,6 @@ ROOT = Path(__file__).resolve().parent.parent
 MEMBER_SNAPSHOTS = ROOT / "data" / "member_snapshots.csv"
 HOURLY = ROOT / "data" / "hourly.csv"
 BENCHMARK_HISTORY = ROOT / "data" / "benchmark_history.csv"
-MARKET_SEAT_CURVE = ROOT / "data" / "market_seat_sell_curve.json"
-OWN_SEAT_DAILY = ROOT / "data" / "own_seat_daily.csv"
 
 BLIP_CAP_RATIO = 1.4
 MIN_SAMPLES = 3
@@ -260,40 +258,6 @@ def predict_opening_final(daily_series: list, benchmark_csv: Path, benchmark_mov
         "daytype_weekly_decay": {k: round(v, 3) for k, v in decay.items()},
         "seat_cliff_detected": seat_cliff_detected,
         "basis": "actual_to_date + remaining_days(same_day_type_last_actual x benchmark_weekly_decay^weeks_ahead, capped)",
-    }
-
-
-def market_reference_today(movie_cd: str, release_date: datetime.date, today: datetime.date) -> dict:
-    """참고용: (오늘 경과일차의 2026년 시장 평균 좌석판매율) x (오늘 우리 영화 좌석수).
-
-    메인 예측(predict_today_final)과는 별개의 참고 지표 — 대시보드에 별도 항목으로만 노출한다.
-    좌석수는 KOBIS Open API에 없어 own_seat_daily.csv(Playwright 수집)에서 가져오며,
-    당일 확정치가 아직 없으면(하루가 끝나야 확정) None을 반환한다.
-    """
-    offset = (today - release_date).days
-    market_avg_pct = None
-    if MARKET_SEAT_CURVE.exists():
-        with open(MARKET_SEAT_CURVE, encoding="utf-8") as f:
-            curve = json.load(f).get("avg_seat_sell_pct_by_offset_daytype", {})
-        market_avg_pct = curve.get(f"{offset}:{day_type(today)}")
-
-    seat_cnt = None
-    if OWN_SEAT_DAILY.exists():
-        today_str = today.strftime("%Y%m%d")
-        with open(OWN_SEAT_DAILY, encoding="utf-8-sig", newline="") as f:
-            for row in csv.DictReader(f):
-                if row.get("movie_cd") == movie_cd and row.get("found") == "1" and row.get("target_date") == today_str:
-                    seat_cnt = _to_int(row.get("seat_cnt"))
-
-    predicted = None
-    if offset >= 0 and market_avg_pct is not None and seat_cnt:
-        predicted = round(seat_cnt * market_avg_pct / 100)
-
-    return {
-        "predicted": predicted,
-        "day_offset": offset,
-        "market_avg_seat_sell_pct": market_avg_pct,
-        "seat_cnt": seat_cnt,
     }
 
 
