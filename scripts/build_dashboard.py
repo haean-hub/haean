@@ -327,6 +327,14 @@ def build() -> None:
     else:
         title_html = f'<h1>{target["title"]}</h1>'
 
+    side_art = target.get("side_art", "")
+    has_side_art = bool(side_art) and (ROOT / side_art).exists()
+    side_art_html = (
+        f'<div class="side-art side-art--left"><img src="{side_art}" alt=""></div>'
+        f'<div class="side-art side-art--right"><img src="{side_art}" alt=""></div>'
+        if has_side_art else ""
+    )
+
     d_day = (release_date - today).days
     if d_day > 0:
         status_badge = f'<span class="badge badge--upcoming">D-{d_day}</span>'
@@ -374,7 +382,29 @@ def build() -> None:
     font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
     margin: 0; padding: 32px 16px 64px;
   }}
-  .wrap {{ max-width: 960px; margin: 0 auto; }}
+  .wrap {{ max-width: 960px; margin: 0 auto; position: relative; z-index: 1; }}
+  /* 키아트(furious-keyart.jpg)에서 인물별로 잘라 보여준다. 원본 3840x2160 기준,
+     100vh 높이로 스케일했을 때 왼쪽 인물은 0px, 오른쪽 인물은 -500px 오프셋에서
+     각각 가장 깔끔하게 잡혀 crop_test.html로 확인 후 고정했다(뷰포트 높이 비례를
+     위해 px 대신 vh 단위: -500/900 ≈ -55.6vh). */
+  .side-art {{
+    position: fixed; top: 0; height: 100vh; width: 300px; overflow: hidden;
+    z-index: 0; opacity: 0.85; pointer-events: none;
+  }}
+  .side-art img {{ position: absolute; top: 0; height: 100vh; width: auto; max-width: none; }}
+  .side-art--left {{
+    left: 0;
+    -webkit-mask-image: linear-gradient(to right, black 55%, transparent 100%);
+    mask-image: linear-gradient(to right, black 55%, transparent 100%);
+  }}
+  .side-art--left img {{ left: 0; }}
+  .side-art--right {{
+    right: 0;
+    -webkit-mask-image: linear-gradient(to left, black 55%, transparent 100%);
+    mask-image: linear-gradient(to left, black 55%, transparent 100%);
+  }}
+  .side-art--right img {{ left: -55.6vh; }}
+  @media (max-width: 1400px) {{ .side-art {{ display: none; }} }}
   header {{ display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }}
   h1 {{ font-size: 1.5rem; font-weight: 600; margin: 0; letter-spacing: -0.01em; }}
   .title-logo {{ height: 40px; width: auto; display: block; }}
@@ -433,6 +463,7 @@ def build() -> None:
     .hero, .comments {{ grid-template-columns: 1fr; }}
   }}
 </style>
+{side_art_html}
 <div class="wrap">
   <header>
     {title_html}
