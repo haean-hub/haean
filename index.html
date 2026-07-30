@@ -3,42 +3,101 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root {
-    --bg: #ffffff; --fg: #1a1a1a; --muted: #6b7280; --accent: #2563eb;
-    --card-bg: #f8fafc; --border: #e5e7eb;
+    color-scheme: light;
+    --page-bg: #f9f9f7; --surface-1: #fcfcfb;
+    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #898781;
+    --gridline: #e1e0d9; --border: rgba(11,11,11,0.10);
+    --series-1: #2a78d6; --series-2: #1baf7a;
+    --delta-up: #006300; --delta-down: #d03b3b;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #0f1115; --fg: #e5e7eb; --muted: #9ca3af; --accent: #60a5fa; --card-bg: #1a1d23; --border: #2a2e37; }
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page-bg: #0d0d0d; --surface-1: #1a1a19;
+      --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
+      --gridline: #2c2c2a; --border: rgba(255,255,255,0.10);
+      --series-1: #3987e5; --series-2: #199e70;
+      --delta-up: #0ca30c; --delta-down: #e66767;
+    }
   }
-  :root[data-theme="dark"] { --bg: #0f1115; --fg: #e5e7eb; --muted: #9ca3af; --accent: #60a5fa; --card-bg: #1a1d23; --border: #2a2e37; }
-  :root[data-theme="light"] { --bg: #ffffff; --fg: #1a1a1a; --muted: #6b7280; --accent: #2563eb; --card-bg: #f8fafc; --border: #e5e7eb; }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page-bg: #0d0d0d; --surface-1: #1a1a19;
+    --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
+    --gridline: #2c2c2a; --border: rgba(255,255,255,0.10);
+    --series-1: #3987e5; --series-2: #199e70;
+    --delta-up: #0ca30c; --delta-down: #e66767;
+  }
   * { box-sizing: border-box; }
-  body { background: var(--bg); color: var(--fg); font-family: -apple-system, "Malgun Gothic", sans-serif; margin: 0; padding: 24px 16px 60px; }
-  .wrap { max-width: 920px; margin: 0 auto; }
-  h1 { font-size: 1.4rem; margin: 0 0 4px; }
-  .updated { color: var(--muted); font-size: 0.85rem; margin-bottom: 24px; }
-  .hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 28px; }
-  .hero-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
-  .hero-label { color: var(--muted); font-size: 0.85rem; margin-bottom: 6px; }
-  .hero-value { font-size: 1.9rem; font-weight: 700; }
-  .hero-sub { color: var(--muted); font-size: 0.8rem; margin-top: 4px; }
-  .comments { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
-  .comment-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
-  .comment-title { font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; }
-  .comment-body { font-size: 0.92rem; line-height: 1.5; }
-  .section { margin-bottom: 32px; }
-  .section h2 { font-size: 1.05rem; margin-bottom: 10px; }
-  .chart-svg { width: 100%; height: auto; overflow: visible; }
-  .axis-label, .point-label, .legend { font-size: 10px; fill: var(--muted); }
-  .point-label { font-weight: 600; fill: var(--fg); }
-  .chart-empty { color: var(--muted); font-size: 0.85rem; padding: 40px 0; text-align: center; border: 1px dashed var(--border); border-radius: 8px; }
+  body {
+    background: var(--page-bg); color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+    margin: 0; padding: 32px 16px 64px;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  header { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  h1 { font-size: 1.5rem; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+  .badge--upcoming { background: color-mix(in srgb, var(--series-1) 16%, transparent); color: var(--series-1); }
+  .badge--live { background: color-mix(in srgb, var(--delta-up) 16%, transparent); color: var(--delta-up); }
+  .updated { color: var(--text-muted); font-size: 0.82rem; margin: 4px 0 28px; }
+
+  .hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-bottom: 28px; }
+  .hero-card {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px 22px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .hero-label { color: var(--text-secondary); font-size: 0.83rem; margin-bottom: 8px; }
+  .hero-value { font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }
+  .hero-sub { color: var(--text-muted); font-size: 0.8rem; margin-top: 6px; }
+  .delta-up { color: var(--delta-up); font-weight: 600; }
+  .delta-down { color: var(--delta-down); font-weight: 600; }
+
+  .comments { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 32px; }
+  .comment-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .comment-title { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px; }
+  .comment-body { font-size: 0.92rem; line-height: 1.55; color: var(--text-primary); }
+
+  .section { margin-bottom: 36px; }
+  .section h2 { font-size: 1rem; font-weight: 600; margin: 0 0 14px; color: var(--text-primary); }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px 10px; }
+
+  .chart-svg { width: 100%; height: auto; overflow: visible; display: block; }
+  .gridline { stroke: var(--gridline); stroke-width: 1; }
+  .axis-label, .point-label { font-size: 10px; fill: var(--text-muted); }
+  .point-label { font-weight: 600; fill: var(--text-primary); }
+  .chart-empty { color: var(--text-muted); font-size: 0.85rem; padding: 44px 0; text-align: center; }
   .hover-dot { cursor: pointer; }
-  .hover-dot:hover { fill: var(--accent); opacity: 0.2; }
-  footer { color: var(--muted); font-size: 0.75rem; margin-top: 40px; }
-  @media (max-width: 600px) { .hero, .comments { grid-template-columns: 1fr; } }
+  .hover-dot:hover { fill: var(--series-1); opacity: 0.18; }
+
+  .chart-legend { display: flex; gap: 18px; margin-bottom: 10px; font-size: 0.82rem; color: var(--text-secondary); }
+  .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .legend-swatch--dashed { background: transparent; border: 2px dashed; border-radius: 0; width: 12px; height: 0; }
+
+  .cmp-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  .cmp-table th { text-align: left; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); padding: 0 8px 10px; border-bottom: 1px solid var(--gridline); }
+  .cmp-table th:not(:first-child), .cmp-table td:not(:first-child) { text-align: right; }
+  .cmp-table td { padding: 10px 8px; border-bottom: 1px solid var(--gridline); }
+  .cmp-table tr:last-child td { border-bottom: none; }
+  .cmp-num { font-variant-numeric: tabular-nums; color: var(--text-primary); }
+  .cmp-title { color: var(--text-primary); }
+  .cmp-row--own { font-weight: 700; }
+  .cmp-row--own .cmp-title::before { content: "●"; color: var(--series-1); margin-right: 7px; font-size: 0.7rem; }
+  .cmp-pending { color: var(--text-muted); font-size: 0.76rem; margin-left: 8px; font-weight: 400; }
+
+  footer { color: var(--text-muted); font-size: 0.76rem; margin-top: 44px; line-height: 1.6; }
+
+  @media (max-width: 600px) {
+    .hero, .comments { grid-template-columns: 1fr; }
+  }
 </style>
 <div class="wrap">
-  <h1>퓨리어스 박스오피스 실시간 추적</h1>
-  <div class="updated">최종 갱신: 2026-07-30 17:27</div>
+  <header>
+    <h1>퓨리어스</h1>
+    <span class="badge badge--upcoming">D-41</span>
+  </header>
+  <div class="updated">박스오피스 실시간 추적 · 최종 갱신 2026-07-30 17:43</div>
 
   <div class="hero">
     <div class="hero-card">
@@ -66,22 +125,30 @@
 
   <div class="section">
     <h2>오늘 시간대별 예매 관객(개봉 전)</h2>
-    <div class="chart-empty">데이터가 아직 충분하지 않습니다 (0건)</div>
+    <div class="card"><div class="chart-empty">데이터가 아직 충분하지 않습니다 (0건)</div></div>
   </div>
 
   <div class="section">
     <h2>일별 누적 관객</h2>
-    <div class="chart-empty">데이터가 아직 충분하지 않습니다 (0건)</div>
+    <div class="card"><div class="chart-empty">데이터가 아직 충분하지 않습니다 (0건)</div></div>
   </div>
 
   <div class="section">
-    <h2>회당 평균 관객(상영 규모 대비, 좌석판매율 근사)</h2>
-    <div class="chart-empty">데이터가 아직 충분하지 않습니다 (0건)</div>
+    <h2>회당 평균 관객 (상영 규모 대비, 좌석판매율 근사)</h2>
+    <div class="card"><div class="chart-empty">데이터가 아직 충분하지 않습니다 (0건)</div></div>
   </div>
 
   <div class="section">
     <h2>벤치마크 비교 (개봉일 기준 경과일, 누적 관객)</h2>
-    <div class="chart-empty">비교할 데이터가 아직 충분하지 않습니다</div>
+    <div class="card"><div class="chart-empty">비교할 데이터가 아직 충분하지 않습니다</div></div>
+  </div>
+
+  <div class="section">
+    <h2>경쟁작 현황</h2>
+    <div class="card"><table class="cmp-table">
+  <thead><tr><th>영화</th><th>실시간 예매율</th><th>누적관객수</th></tr></thead>
+  <tbody><tr class="cmp-row cmp-row--own"><td class="cmp-title">퓨리어스<span class="cmp-pending">집계 전</span></td><td class="cmp-num">—</td><td class="cmp-num">—</td></tr><tr class="cmp-row"><td class="cmp-title">비광<span class="cmp-pending">집계 전</span></td><td class="cmp-num">—</td><td class="cmp-num">—</td></tr><tr class="cmp-row"><td class="cmp-title">싱 어게인<span class="cmp-pending">집계 전</span></td><td class="cmp-num">—</td><td class="cmp-num">—</td></tr><tr class="cmp-row"><td class="cmp-title">옵세션<span class="cmp-pending">집계 전</span></td><td class="cmp-num">—</td><td class="cmp-num">—</td></tr><tr class="cmp-row"><td class="cmp-title">딥 워터<span class="cmp-pending">집계 전</span></td><td class="cmp-num">—</td><td class="cmp-num">—</td></tr><tr class="cmp-row"><td class="cmp-title">인 더 그레이<span class="cmp-pending">집계 전</span></td><td class="cmp-num">—</td><td class="cmp-num">—</td></tr><tr class="cmp-row"><td class="cmp-title">더 드라마<span class="cmp-pending">집계 전</span></td><td class="cmp-num">—</td><td class="cmp-num">—</td></tr></tbody>
+</table></div>
   </div>
 
   <footer>

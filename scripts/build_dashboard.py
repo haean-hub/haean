@@ -1,6 +1,7 @@
 """수집 데이터 + predict.py 예측치를 읽어 자체완결 index.html 대시보드를 생성한다.
 
 외부 CDN 의존 없이 인라인 CSS/SVG만 사용한다(레퍼런스 프롬프트 요구사항).
+색/타이포/차트 스펙은 dataviz 스킬의 검증된 기본 팔레트를 그대로 사용한다.
 """
 import csv
 import datetime
@@ -16,6 +17,7 @@ from predict import (
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = ROOT / "config" / "film_config.json"
 AI_COMMENT_PATH = ROOT / "ai_comment.json"
+COMPETITORS_PATH = ROOT / "data" / "competitors.csv"
 OUTPUT_PATH = ROOT / "index.html"
 
 DEFAULT_AI_COMMENT = {
@@ -24,6 +26,10 @@ DEFAULT_AI_COMMENT = {
     "주말": "아직 코멘트가 생성되지 않았습니다.",
     "신규수요분해": "아직 코멘트가 생성되지 않았습니다.",
 }
+
+# --- 색: dataviz 스킬 references/palette.md 의 검증된 기본값 그대로 사용 ---
+SERIES_1 = "var(--series-1)"  # blue  — 대상 영화
+SERIES_2 = "var(--series-2)"  # aqua  — 벤치마크/비교
 
 
 def load_config() -> dict:
@@ -77,7 +83,28 @@ def html_escape(s: str) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def svg_line_chart(series: list, width=640, height=220, color="var(--accent)", value_fmt=fmt_num,
+def nice_ticks(vmin: float, vmax: float, n: int = 3) -> list:
+    """y축용 깔끔한 눈금 n개(대략)를 만든다."""
+    if vmax <= vmin:
+        return [vmin]
+    span = vmax - vmin
+    raw_step = span / (n - 1)
+    mag = 10 ** (len(str(int(raw_step))) - 1) if raw_step >= 1 else 1
+    for m in (1, 2, 2.5, 5, 10):
+        step = m * mag
+        if step >= raw_step:
+            break
+    start = (int(vmin / step)) * step
+    ticks = []
+    v = start
+    while v <= vmax + step * 0.01:
+        if v >= vmin - step * 0.01:
+            ticks.append(round(v))
+        v += step
+    return ticks or [vmin, vmax]
+
+
+def svg_line_chart(series: list, width=640, height=240, color=SERIES_1, value_fmt=fmt_num,
                     tooltips: list = None) -> str:
     """series: [(label, value), ...]. tooltips가 주어지면 각 점에 마우스오버 시 표시(SVG <title>, JS 불필요)."""
     pts_all = [(i, l, v) for i, (l, v) in enumerate(series) if v is not None]
@@ -86,11 +113,11 @@ def svg_line_chart(series: list, width=640, height=220, color="var(--accent)", v
     if len(pts) < 2:
         return f'<div class="chart-empty">데이터가 아직 충분하지 않습니다 ({len(pts)}건)</div>'
 
-    pad_l, pad_r, pad_t, pad_b = 40, 16, 16, 28
+    pad_l, pad_r, pad_t, pad_b = 46, 16, 16, 28
     plot_w = width - pad_l - pad_r
     plot_h = height - pad_t - pad_b
     values = [v for _, v in pts]
-    vmin, vmax = min(values), max(values)
+    vmin, vmax = min(0, min(values)), max(values)
     if vmax == vmin:
         vmax = vmin + 1
 
@@ -104,6 +131,14 @@ def svg_line_chart(series: list, width=640, height=220, color="var(--accent)", v
         f"{'M' if i == 0 else 'L'}{x_of(i):.1f},{y_of(v):.1f}" for i, (_, v) in enumerate(pts)
     )
     area_d = path_d + f" L{x_of(len(pts)-1):.1f},{pad_t+plot_h} L{x_of(0):.1f},{pad_t+plot_h} Z"
+
+    # y축: 눈금 + 헤어라인 그리드
+    ticks = nice_ticks(vmin, vmax, 3)
+    grid_svg = "".join(
+        f'<line x1="{pad_l}" y1="{y_of(t):.1f}" x2="{width-pad_r}" y2="{y_of(t):.1f}" class="gridline"></line>'
+        f'<text x="{pad_l-8}" y="{y_of(t)+3:.1f}" class="axis-label" text-anchor="end">{fmt_num(t)}</text>'
+        for t in ticks
+    )
 
     # x축 라벨: 처음/중간/끝만
     label_idxs = sorted(set([0, len(pts) // 2, len(pts) - 1]))
@@ -123,9 +158,10 @@ def svg_line_chart(series: list, width=640, height=220, color="var(--accent)", v
         )
 
     return f'''<svg viewBox="0 0 {width} {height}" class="chart-svg" role="img" aria-label="추이 차트">
-  <path d="{area_d}" fill="{color}" opacity="0.12" stroke="none"></path>
-  <path d="{path_d}" fill="none" stroke="{color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></path>
-  <circle cx="{x_of(len(pts)-1):.1f}" cy="{y_of(last_val):.1f}" r="4" fill="{color}"></circle>
+  {grid_svg}
+  <path d="{area_d}" fill="{color}" opacity="0.10" stroke="none"></path>
+  <path d="{path_d}" fill="none" stroke="{color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+  <circle cx="{x_of(len(pts)-1):.1f}" cy="{y_of(last_val):.1f}" r="4" fill="{color}" stroke="var(--surface-1)" stroke-width="2"></circle>
   <text x="{x_of(len(pts)-1):.1f}" y="{y_of(last_val)-10:.1f}" class="point-label" text-anchor="end">{value_fmt(last_val)}</text>
   {labels_svg}
   {hover_points_svg}
@@ -133,19 +169,19 @@ def svg_line_chart(series: list, width=640, height=220, color="var(--accent)", v
 
 
 def svg_multi_line_chart(series_a: list, series_b: list, name_a: str, name_b: str,
-                           width=640, height=240, color_a="var(--accent)", color_b="var(--muted)") -> str:
+                          width=640, height=240, color_a=SERIES_1, color_b=SERIES_2) -> str:
     pts_a = [(x, v) for x, v in series_a if v is not None]
     pts_b = [(x, v) for x, v in series_b if v is not None]
     if len(pts_a) < 2 or len(pts_b) < 2:
-        return f'<div class="chart-empty">비교할 데이터가 아직 충분하지 않습니다</div>'
+        return '<div class="chart-empty">비교할 데이터가 아직 충분하지 않습니다</div>'
 
-    pad_l, pad_r, pad_t, pad_b = 40, 16, 16, 28
+    pad_l, pad_r, pad_t, pad_b = 46, 16, 16, 28
     plot_w = width - pad_l - pad_r
     plot_h = height - pad_t - pad_b
     all_x = sorted(set([x for x, _ in pts_a] + [x for x, _ in pts_b]))
     xmin, xmax = min(all_x), max(all_x)
     all_v = [v for _, v in pts_a] + [v for _, v in pts_b]
-    vmin, vmax = 0, max(all_v)
+    vmin, vmax = 0, max(all_v) if all_v else 1
     if vmax == 0:
         vmax = 1
 
@@ -160,12 +196,66 @@ def svg_multi_line_chart(series_a: list, series_b: list, name_a: str, name_b: st
     def path_for(pts):
         return " ".join(f"{'M' if i == 0 else 'L'}{x_of(x):.1f},{y_of(v):.1f}" for i, (x, v) in enumerate(pts))
 
-    return f'''<svg viewBox="0 0 {width} {height}" class="chart-svg" role="img" aria-label="비교 차트">
-  <path d="{path_for(pts_a)}" fill="none" stroke="{color_a}" stroke-width="2.5"></path>
-  <path d="{path_for(pts_b)}" fill="none" stroke="{color_b}" stroke-width="2" stroke-dasharray="5,4"></path>
-  <text x="{pad_l}" y="16" class="legend" fill="{color_a}">● {name_a}</text>
-  <text x="{pad_l+120}" y="16" class="legend" fill="{color_b}">--- {name_b}</text>
+    ticks = nice_ticks(0, vmax, 3)
+    grid_svg = "".join(
+        f'<line x1="{pad_l}" y1="{y_of(t):.1f}" x2="{width-pad_r}" y2="{y_of(t):.1f}" class="gridline"></line>'
+        f'<text x="{pad_l-8}" y="{y_of(t)+3:.1f}" class="axis-label" text-anchor="end">{fmt_num(t)}</text>'
+        for t in ticks
+    )
+
+    return f'''<div class="chart-legend">
+  <span class="legend-item"><span class="legend-swatch" style="background:{color_a}"></span>{html_escape(name_a)}</span>
+  <span class="legend-item"><span class="legend-swatch legend-swatch--dashed" style="border-color:{color_b}"></span>{html_escape(name_b)}</span>
+</div>
+<svg viewBox="0 0 {width} {height}" class="chart-svg" role="img" aria-label="비교 차트">
+  {grid_svg}
+  <path d="{path_for(pts_a)}" fill="none" stroke="{color_a}" stroke-width="2" stroke-linecap="round"></path>
+  <path d="{path_for(pts_b)}" fill="none" stroke="{color_b}" stroke-width="2" stroke-linecap="round" stroke-dasharray="6,4"></path>
 </svg>'''
+
+
+def load_competitor_rows() -> list:
+    """경쟁작별 가장 최근 수집 행 하나씩."""
+    if not COMPETITORS_PATH.exists():
+        return []
+    latest = {}
+    with open(COMPETITORS_PATH, encoding="utf-8-sig", newline="") as f:
+        for row in csv.DictReader(f):
+            latest[row["movie_cd"]] = row
+    return list(latest.values())
+
+
+def competitor_table(rows: list, own_title: str, own_rate, own_cum) -> str:
+    """경쟁작 비교는 색상 6개 이상이 겹쳐 선그래프보다 표가 더 읽기 쉬워 표로 낸다."""
+    entries = [{
+        "title": own_title, "rate": own_rate, "cum": own_cum, "own": True, "found": own_rate is not None,
+    }]
+    for r in rows:
+        rate = float(r["reservation_rate"]) if r.get("reservation_rate") else None
+        cum = int(r["cum_audi"]) if r.get("cum_audi") else None
+        entries.append({"title": r["movie_nm"] or r["movie_cd"], "rate": rate, "cum": cum,
+                         "own": False, "found": r.get("found") == "1"})
+
+    entries.sort(key=lambda e: (e["rate"] is None, -(e["rate"] or 0)))
+
+    if len(entries) <= 1:
+        return '<div class="chart-empty">등록된 경쟁작이 없습니다</div>'
+
+    rows_html = []
+    for e in entries:
+        row_cls = "cmp-row cmp-row--own" if e["own"] else "cmp-row"
+        rate_txt = f'{e["rate"]:.1f}%' if e["rate"] is not None else "—"
+        cum_txt = fmt_num(e["cum"]) + "명" if e["cum"] is not None else "—"
+        status = "" if e["found"] else '<span class="cmp-pending">집계 전</span>'
+        rows_html.append(
+            f'<tr class="{row_cls}"><td class="cmp-title">{html_escape(e["title"])}{status}</td>'
+            f'<td class="cmp-num">{rate_txt}</td><td class="cmp-num">{cum_txt}</td></tr>'
+        )
+
+    return f'''<table class="cmp-table">
+  <thead><tr><th>영화</th><th>실시간 예매율</th><th>누적관객수</th></tr></thead>
+  <tbody>{"".join(rows_html)}</tbody>
+</table>'''
 
 
 def build() -> None:
@@ -188,7 +278,6 @@ def build() -> None:
 
     # 차트용 데이터
     cum_series = [(r["date"].strftime("%m/%d"), r["cum_audi"]) for r in daily_series]
-    # 개봉 전(cum_audi=0)에는 예매관객으로, 개봉 후에는 실제 누적관객으로 오늘 추이를 보여준다
     released_today = any((h["cum_audi"] or 0) > 0 for h in hourly_today)
     hourly_metric = "cum_audi" if released_today else "reservation_audi"
     hourly_chart_title = "오늘 시간대별 누적 관객(실제 입장)" if released_today else "오늘 시간대별 예매 관객(개봉 전)"
@@ -198,7 +287,6 @@ def build() -> None:
         for r in daily_series
     ]
 
-    # 대상 vs 벤치마크: day_offset 기준 누적 비교
     release_date = datetime.datetime.strptime(target["release_date"], "%Y-%m-%d").date()
     target_by_offset = [((r["date"] - release_date).days, r["cum_audi"]) for r in daily_series]
     benchmark_by_offset = []
@@ -225,9 +313,35 @@ def build() -> None:
         mins = latest_snapshot["minutes_since_prev"]
         if delta is not None and mins:
             sign = "+" if delta >= 0 else ""
-            reservation_sub = f'<div class="hero-sub">{as_of} 기준 · 직전 {mins}분간 {sign}{delta:,}명</div>'
+            delta_cls = "delta-up" if delta >= 0 else "delta-down"
+            reservation_sub = (
+                f'<div class="hero-sub">{as_of} 기준 · '
+                f'<span class="{delta_cls}">직전 {mins}분간 {sign}{delta:,}명</span></div>'
+            )
         else:
             reservation_sub = f'<div class="hero-sub">{as_of} 기준</div>'
+
+    d_day = (release_date - today).days
+    if d_day > 0:
+        status_badge = f'<span class="badge badge--upcoming">D-{d_day}</span>'
+    elif d_day == 0:
+        status_badge = '<span class="badge badge--live">개봉 당일</span>'
+    else:
+        status_badge = f'<span class="badge badge--live">개봉 {abs(d_day)}일차</span>'
+
+    competitor_rows = load_competitor_rows()
+    own_rate = None
+    if HOURLY.exists():
+        with open(HOURLY, encoding="utf-8-sig", newline="") as f:
+            last_found = None
+            for row in csv.DictReader(f):
+                if row.get("movie_cd") == movie_cd and row.get("found") == "1":
+                    last_found = row
+            if last_found and last_found.get("reservation_rate"):
+                own_rate = float(last_found["reservation_rate"])
+    own_cum = daily_series[-1]["cum_audi"] if daily_series else (
+        latest_snapshot["reservation_audi"] if latest_snapshot else None
+    )
 
     generated_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -236,42 +350,101 @@ def build() -> None:
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root {{
-    --bg: #ffffff; --fg: #1a1a1a; --muted: #6b7280; --accent: #2563eb;
-    --card-bg: #f8fafc; --border: #e5e7eb;
+    color-scheme: light;
+    --page-bg: #f9f9f7; --surface-1: #fcfcfb;
+    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #898781;
+    --gridline: #e1e0d9; --border: rgba(11,11,11,0.10);
+    --series-1: #2a78d6; --series-2: #1baf7a;
+    --delta-up: #006300; --delta-down: #d03b3b;
   }}
   @media (prefers-color-scheme: dark) {{
-    :root {{ --bg: #0f1115; --fg: #e5e7eb; --muted: #9ca3af; --accent: #60a5fa; --card-bg: #1a1d23; --border: #2a2e37; }}
+    :root:where(:not([data-theme="light"])) {{
+      color-scheme: dark;
+      --page-bg: #0d0d0d; --surface-1: #1a1a19;
+      --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
+      --gridline: #2c2c2a; --border: rgba(255,255,255,0.10);
+      --series-1: #3987e5; --series-2: #199e70;
+      --delta-up: #0ca30c; --delta-down: #e66767;
+    }}
   }}
-  :root[data-theme="dark"] {{ --bg: #0f1115; --fg: #e5e7eb; --muted: #9ca3af; --accent: #60a5fa; --card-bg: #1a1d23; --border: #2a2e37; }}
-  :root[data-theme="light"] {{ --bg: #ffffff; --fg: #1a1a1a; --muted: #6b7280; --accent: #2563eb; --card-bg: #f8fafc; --border: #e5e7eb; }}
+  :root[data-theme="dark"] {{
+    color-scheme: dark;
+    --page-bg: #0d0d0d; --surface-1: #1a1a19;
+    --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
+    --gridline: #2c2c2a; --border: rgba(255,255,255,0.10);
+    --series-1: #3987e5; --series-2: #199e70;
+    --delta-up: #0ca30c; --delta-down: #e66767;
+  }}
   * {{ box-sizing: border-box; }}
-  body {{ background: var(--bg); color: var(--fg); font-family: -apple-system, "Malgun Gothic", sans-serif; margin: 0; padding: 24px 16px 60px; }}
-  .wrap {{ max-width: 920px; margin: 0 auto; }}
-  h1 {{ font-size: 1.4rem; margin: 0 0 4px; }}
-  .updated {{ color: var(--muted); font-size: 0.85rem; margin-bottom: 24px; }}
-  .hero {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 28px; }}
-  .hero-card {{ background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }}
-  .hero-label {{ color: var(--muted); font-size: 0.85rem; margin-bottom: 6px; }}
-  .hero-value {{ font-size: 1.9rem; font-weight: 700; }}
-  .hero-sub {{ color: var(--muted); font-size: 0.8rem; margin-top: 4px; }}
-  .comments {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }}
-  .comment-card {{ background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }}
-  .comment-title {{ font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; }}
-  .comment-body {{ font-size: 0.92rem; line-height: 1.5; }}
-  .section {{ margin-bottom: 32px; }}
-  .section h2 {{ font-size: 1.05rem; margin-bottom: 10px; }}
-  .chart-svg {{ width: 100%; height: auto; overflow: visible; }}
-  .axis-label, .point-label, .legend {{ font-size: 10px; fill: var(--muted); }}
-  .point-label {{ font-weight: 600; fill: var(--fg); }}
-  .chart-empty {{ color: var(--muted); font-size: 0.85rem; padding: 40px 0; text-align: center; border: 1px dashed var(--border); border-radius: 8px; }}
+  body {{
+    background: var(--page-bg); color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+    margin: 0; padding: 32px 16px 64px;
+  }}
+  .wrap {{ max-width: 960px; margin: 0 auto; }}
+  header {{ display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }}
+  h1 {{ font-size: 1.5rem; font-weight: 600; margin: 0; letter-spacing: -0.01em; }}
+  .badge {{ display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }}
+  .badge--upcoming {{ background: color-mix(in srgb, var(--series-1) 16%, transparent); color: var(--series-1); }}
+  .badge--live {{ background: color-mix(in srgb, var(--delta-up) 16%, transparent); color: var(--delta-up); }}
+  .updated {{ color: var(--text-muted); font-size: 0.82rem; margin: 4px 0 28px; }}
+
+  .hero {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-bottom: 28px; }}
+  .hero-card {{
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px 22px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }}
+  .hero-label {{ color: var(--text-secondary); font-size: 0.83rem; margin-bottom: 8px; }}
+  .hero-value {{ font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }}
+  .hero-sub {{ color: var(--text-muted); font-size: 0.8rem; margin-top: 6px; }}
+  .delta-up {{ color: var(--delta-up); font-weight: 600; }}
+  .delta-down {{ color: var(--delta-down); font-weight: 600; }}
+
+  .comments {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 32px; }}
+  .comment-card {{ background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }}
+  .comment-title {{ font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px; }}
+  .comment-body {{ font-size: 0.92rem; line-height: 1.55; color: var(--text-primary); }}
+
+  .section {{ margin-bottom: 36px; }}
+  .section h2 {{ font-size: 1rem; font-weight: 600; margin: 0 0 14px; color: var(--text-primary); }}
+  .card {{ background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px 10px; }}
+
+  .chart-svg {{ width: 100%; height: auto; overflow: visible; display: block; }}
+  .gridline {{ stroke: var(--gridline); stroke-width: 1; }}
+  .axis-label, .point-label {{ font-size: 10px; fill: var(--text-muted); }}
+  .point-label {{ font-weight: 600; fill: var(--text-primary); }}
+  .chart-empty {{ color: var(--text-muted); font-size: 0.85rem; padding: 44px 0; text-align: center; }}
   .hover-dot {{ cursor: pointer; }}
-  .hover-dot:hover {{ fill: var(--accent); opacity: 0.2; }}
-  footer {{ color: var(--muted); font-size: 0.75rem; margin-top: 40px; }}
-  @media (max-width: 600px) {{ .hero, .comments {{ grid-template-columns: 1fr; }} }}
+  .hover-dot:hover {{ fill: var(--series-1); opacity: 0.18; }}
+
+  .chart-legend {{ display: flex; gap: 18px; margin-bottom: 10px; font-size: 0.82rem; color: var(--text-secondary); }}
+  .legend-item {{ display: inline-flex; align-items: center; gap: 6px; }}
+  .legend-swatch {{ width: 10px; height: 10px; border-radius: 50%; display: inline-block; }}
+  .legend-swatch--dashed {{ background: transparent; border: 2px dashed; border-radius: 0; width: 12px; height: 0; }}
+
+  .cmp-table {{ width: 100%; border-collapse: collapse; font-size: 0.9rem; }}
+  .cmp-table th {{ text-align: left; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); padding: 0 8px 10px; border-bottom: 1px solid var(--gridline); }}
+  .cmp-table th:not(:first-child), .cmp-table td:not(:first-child) {{ text-align: right; }}
+  .cmp-table td {{ padding: 10px 8px; border-bottom: 1px solid var(--gridline); }}
+  .cmp-table tr:last-child td {{ border-bottom: none; }}
+  .cmp-num {{ font-variant-numeric: tabular-nums; color: var(--text-primary); }}
+  .cmp-title {{ color: var(--text-primary); }}
+  .cmp-row--own {{ font-weight: 700; }}
+  .cmp-row--own .cmp-title::before {{ content: "●"; color: var(--series-1); margin-right: 7px; font-size: 0.7rem; }}
+  .cmp-pending {{ color: var(--text-muted); font-size: 0.76rem; margin-left: 8px; font-weight: 400; }}
+
+  footer {{ color: var(--text-muted); font-size: 0.76rem; margin-top: 44px; line-height: 1.6; }}
+
+  @media (max-width: 600px) {{
+    .hero, .comments {{ grid-template-columns: 1fr; }}
+  }}
 </style>
 <div class="wrap">
-  <h1>{target["title"]} 박스오피스 실시간 추적</h1>
-  <div class="updated">최종 갱신: {generated_at}</div>
+  <header>
+    <h1>{target["title"]}</h1>
+    {status_badge}
+  </header>
+  <div class="updated">박스오피스 실시간 추적 · 최종 갱신 {generated_at}</div>
 
   <div class="hero">
     <div class="hero-card">
@@ -299,22 +472,27 @@ def build() -> None:
 
   <div class="section">
     <h2>{hourly_chart_title}</h2>
-    {svg_line_chart(hourly_series, tooltips=hourly_tooltips)}
+    <div class="card">{svg_line_chart(hourly_series, tooltips=hourly_tooltips)}</div>
   </div>
 
   <div class="section">
     <h2>일별 누적 관객</h2>
-    {svg_line_chart(cum_series)}
+    <div class="card">{svg_line_chart(cum_series)}</div>
   </div>
 
   <div class="section">
-    <h2>회당 평균 관객(상영 규모 대비, 좌석판매율 근사)</h2>
-    {svg_line_chart(avg_per_show_series, value_fmt=lambda v: f"{v:,.1f}")}
+    <h2>회당 평균 관객 (상영 규모 대비, 좌석판매율 근사)</h2>
+    <div class="card">{svg_line_chart(avg_per_show_series, value_fmt=lambda v: f"{v:,.1f}")}</div>
   </div>
 
   <div class="section">
     <h2>벤치마크 비교 (개봉일 기준 경과일, 누적 관객)</h2>
-    {svg_multi_line_chart(target_by_offset, benchmark_by_offset, target["title"], benchmark.get("title","벤치마크"))}
+    <div class="card">{svg_multi_line_chart(target_by_offset, benchmark_by_offset, target["title"], benchmark.get("title","벤치마크"))}</div>
+  </div>
+
+  <div class="section">
+    <h2>경쟁작 현황</h2>
+    <div class="card">{competitor_table(competitor_rows, target["title"], own_rate, own_cum)}</div>
   </div>
 
   <footer>
