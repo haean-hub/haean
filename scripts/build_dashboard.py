@@ -435,6 +435,7 @@ def build() -> None:
   .hero-label {{ color: var(--text-secondary); font-size: 0.83rem; margin-bottom: 8px; }}
   .hero-value {{ font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }}
   .hero-sub {{ color: var(--text-muted); font-size: 0.8rem; margin-top: 6px; }}
+  .hero-note {{ color: var(--text-muted); font-size: 0.72rem; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--gridline); }}
   .delta-up {{ color: var(--delta-up); font-weight: 600; }}
   .delta-down {{ color: var(--delta-down); font-weight: 600; }}
 
@@ -501,9 +502,10 @@ def build() -> None:
       {target_pct}
     </div>
     <div class="hero-card hero-card--reference">
-      <div class="hero-label">오늘 최종 관객(2026년 평균 기준)</div>
+      <div class="hero-label">오늘 최종 관객(2026년 평균 좌판율 적용시)</div>
       <div class="hero-value">{hero_market_ref}명</div>
       {market_ref_sub}
+      <div class="hero-note">개봉주 평균 좌판율 8% 미만인 경우는 제외한 데이터</div>
     </div>
   </div>
 
