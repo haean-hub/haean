@@ -167,3 +167,7 @@ if __name__ == "__main__":
         datetime.datetime.strptime(args.start, "%Y-%m-%d").date(),
         datetime.datetime.strptime(args.end, "%Y-%m-%d").date(),
     )
+
+    from prune_low_performers import prune  # noqa: E402
+    prune_result = prune()
+    log(f"auto-prune after scrape: {prune_result}")

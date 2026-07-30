@@ -274,8 +274,8 @@ def market_reference_today(movie_cd: str, release_date: datetime.date, today: da
     market_avg_pct = None
     if MARKET_SEAT_CURVE.exists():
         with open(MARKET_SEAT_CURVE, encoding="utf-8") as f:
-            curve = json.load(f).get("avg_seat_sell_pct_by_offset", {})
-        market_avg_pct = curve.get(str(offset))
+            curve = json.load(f).get("avg_seat_sell_pct_by_offset_daytype", {})
+        market_avg_pct = curve.get(f"{offset}:{day_type(today)}")
 
     seat_cnt = None
     if OWN_SEAT_DAILY.exists():
