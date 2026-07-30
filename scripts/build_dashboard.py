@@ -349,31 +349,36 @@ def build() -> None:
 <title>{target["title"]} 박스오피스 추적</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
+  /* 퓨리어스 공식 포스터(딥 틸 + 레드) 톤에 맞춘 팔레트.
+     series-1(레드)=대상 영화, series-2(틸)=벤치마크/비교. 증감 상태색(up/down)은
+     브랜드 레드와 헷갈리지 않도록 별도 색(초록/주황)으로 분리했다.
+     six-checks validator는 Node.js가 필요해 이 환경에서 실행하지 못했고,
+     알려진 대비 기준(WCAG AA 근접)에 맞춰 수동으로 골랐다. */
   :root {{
     color-scheme: light;
-    --page-bg: #f9f9f7; --surface-1: #fcfcfb;
-    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #898781;
-    --gridline: #e1e0d9; --border: rgba(11,11,11,0.10);
-    --series-1: #2a78d6; --series-2: #1baf7a;
-    --delta-up: #006300; --delta-down: #d03b3b;
+    --page-bg: #f7f9f8; --surface-1: #ffffff;
+    --text-primary: #10201e; --text-secondary: #4a5957; --text-muted: #7c8a88;
+    --gridline: #e0e6e4; --border: rgba(10,30,28,0.10);
+    --series-1: #c0392b; --series-2: #0e7c73;
+    --delta-up: #1a7f37; --delta-down: #b35900;
   }}
   @media (prefers-color-scheme: dark) {{
     :root:where(:not([data-theme="light"])) {{
       color-scheme: dark;
-      --page-bg: #0d0d0d; --surface-1: #1a1a19;
-      --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
-      --gridline: #2c2c2a; --border: rgba(255,255,255,0.10);
-      --series-1: #3987e5; --series-2: #199e70;
-      --delta-up: #0ca30c; --delta-down: #e66767;
+      --page-bg: #0c1918; --surface-1: #142826;
+      --text-primary: #f5f7f6; --text-secondary: #b9c4c2; --text-muted: #7f8c8a;
+      --gridline: #24413e; --border: rgba(255,255,255,0.10);
+      --series-1: #e0574c; --series-2: #2dd4bf;
+      --delta-up: #2ea043; --delta-down: #e0972f;
     }}
   }}
   :root[data-theme="dark"] {{
     color-scheme: dark;
-    --page-bg: #0d0d0d; --surface-1: #1a1a19;
-    --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
-    --gridline: #2c2c2a; --border: rgba(255,255,255,0.10);
-    --series-1: #3987e5; --series-2: #199e70;
-    --delta-up: #0ca30c; --delta-down: #e66767;
+    --page-bg: #0c1918; --surface-1: #142826;
+    --text-primary: #f5f7f6; --text-secondary: #b9c4c2; --text-muted: #7f8c8a;
+    --gridline: #24413e; --border: rgba(255,255,255,0.10);
+    --series-1: #e0574c; --series-2: #2dd4bf;
+    --delta-up: #2ea043; --delta-down: #e0972f;
   }}
   * {{ box-sizing: border-box; }}
   body {{
