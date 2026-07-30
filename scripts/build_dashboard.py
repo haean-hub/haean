@@ -321,6 +321,12 @@ def build() -> None:
         else:
             reservation_sub = f'<div class="hero-sub">{as_of} 기준</div>'
 
+    title_logo = target.get("title_logo")
+    if title_logo and (ROOT / title_logo).exists():
+        title_html = f'<img src="{title_logo}" alt="{html_escape(target["title"])}" class="title-logo">'
+    else:
+        title_html = f'<h1>{target["title"]}</h1>'
+
     d_day = (release_date - today).days
     if d_day > 0:
         status_badge = f'<span class="badge badge--upcoming">D-{d_day}</span>'
@@ -369,8 +375,9 @@ def build() -> None:
     margin: 0; padding: 32px 16px 64px;
   }}
   .wrap {{ max-width: 960px; margin: 0 auto; }}
-  header {{ display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }}
+  header {{ display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }}
   h1 {{ font-size: 1.5rem; font-weight: 600; margin: 0; letter-spacing: -0.01em; }}
+  .title-logo {{ height: 40px; width: auto; display: block; }}
   .badge {{ display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }}
   .badge--upcoming {{ background: color-mix(in srgb, var(--series-1) 16%, transparent); color: var(--series-1); }}
   .badge--live {{ background: color-mix(in srgb, var(--delta-up) 16%, transparent); color: var(--delta-up); }}
@@ -428,7 +435,7 @@ def build() -> None:
 </style>
 <div class="wrap">
   <header>
-    <h1>{target["title"]}</h1>
+    {title_html}
     {status_badge}
   </header>
   <div class="updated">박스오피스 실시간 추적 · 최종 갱신 {generated_at}</div>
