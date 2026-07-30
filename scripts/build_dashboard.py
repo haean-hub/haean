@@ -478,7 +478,7 @@ def build() -> None:
       {reservation_sub}
     </div>
     <div class="hero-card">
-      <div class="hero-label">오늘 최종 관객 예측</div>
+      <div class="hero-label">오늘 최종 관객(예상)</div>
       <div class="hero-value">{hero_today}명</div>
     </div>
     <div class="hero-card">
