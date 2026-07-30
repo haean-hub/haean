@@ -1,10 +1,10 @@
 {
   "target_movie": {
-    "title": "스파이더맨: 브랜드 뉴 데이",
-    "movie_cd": "20262770",
-    "release_date": "2026-07-29",
-    "target_admissions": 8000000,
-    "note": "실제 담당 영화가 아직 KOBIS에 등록되지 않아, 구조 검증용으로 넣은 예시(개봉 임박 실제 흥행작)입니다. own_movie가 채워지면 이 블록을 통째로 교체하세요. target_admissions은 임의 설정치입니다."
+    "title": "퓨리어스",
+    "movie_cd": "20265486",
+    "release_date": "2026-09-09",
+    "target_admissions": 1000000,
+    "note": "실제 담당 영화. KOBIS DB에 개봉일이 아직 업데이트되지 않아 release_date는 예상치(9/9)로 임시 설정 — 실제 개봉일 확정되면 반드시 수정할 것. target_admissions도 임의 설정치."
   },
   "benchmark_movies": [
     {
@@ -12,11 +12,5 @@
       "movie_cd": "20210028",
       "release_date": "2021-12-15"
     }
-  ],
-  "own_movie": {
-    "title": "담당 영화명 (미정)",
-    "expected_release_date": "2026-09-09",
-    "movie_cd": null,
-    "note": "KOBIS에 movie_cd가 등록되면 이 블록의 값을 채운 뒤 target_movie와 통째로 교체하세요."
-  }
+  ]
 }
