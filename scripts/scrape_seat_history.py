@@ -137,6 +137,8 @@ def scrape_range(start: datetime.date, end: datetime.date) -> None:
 
             page.evaluate(f'document.getElementById("startDate").value = "{s_str}"')
             page.evaluate(f'document.getElementById("endDate").value = "{e_str}"')
+            # searchType 기본값은 "일반영화"만(빈 값) -> "2"(전체)로 명시해야 독립·예술영화도 포함된다
+            page.evaluate('document.querySelector("select[name=searchType]").value = "2"')
             try:
                 with page.expect_navigation(wait_until="networkidle", timeout=30000):
                     page.evaluate('chkform("search")')

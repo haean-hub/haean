@@ -54,6 +54,11 @@ def fetch_last_week_rows() -> list:
         page = browser.new_page(user_agent="Mozilla/5.0")
         page.on("dialog", lambda d: d.accept())
         page.goto(URL, wait_until="networkidle")
+        # 기본값은 "일반영화"만 -> "전체"로 바꿔 다시 조회(독립·예술영화 포함)
+        page.evaluate('document.querySelector("select[name=searchType]").value = "2"')
+        with page.expect_navigation(wait_until="networkidle", timeout=30000):
+            page.evaluate('chkform("search")')
+        page.wait_for_timeout(800)
         data = page.evaluate(
             """
             () => {
