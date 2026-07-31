@@ -478,11 +478,11 @@ def build() -> None:
       {reservation_sub}
     </div>
     <div class="hero-card">
-      <div class="hero-label">오늘 최종 관객(예상)</div>
+      <div class="hero-label">오늘 스코어(예상)</div>
       <div class="hero-value">{hero_today}명</div>
     </div>
     <div class="hero-card">
-      <div class="hero-label">개봉 최종 총관객 전망</div>
+      <div class="hero-label">최종 스코어</div>
       <div class="hero-value">{hero_final}명</div>
       {target_pct}
     </div>
