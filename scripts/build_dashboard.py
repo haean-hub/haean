@@ -225,18 +225,19 @@ def load_competitor_rows() -> list:
     return list(latest.values())
 
 
-def competitor_table(rows: list, own_title: str, own_rate, own_cum) -> str:
-    """경쟁작 비교는 색상 6개 이상이 겹쳐 선그래프보다 표가 더 읽기 쉬워 표로 낸다."""
+def competitor_table(rows: list, own_title: str, own_audi, own_cum) -> str:
+    """경쟁작 비교는 색상 6개 이상이 겹쳐 선그래프보다 표가 더 읽기 쉬워 표로 낸다.
+    실시간 예매율(%)은 개봉 전 비교 시 체감이 잘 안 돼서, 실제 인원수인 예매관객수로 비교한다."""
     entries = [{
-        "title": own_title, "rate": own_rate, "cum": own_cum, "own": True, "found": own_rate is not None,
+        "title": own_title, "audi": own_audi, "cum": own_cum, "own": True, "found": own_audi is not None,
     }]
     for r in rows:
-        rate = float(r["reservation_rate"]) if r.get("reservation_rate") else None
+        audi = int(r["reservation_audi"]) if r.get("reservation_audi") else None
         cum = int(r["cum_audi"]) if r.get("cum_audi") else None
-        entries.append({"title": r["movie_nm"] or r["movie_cd"], "rate": rate, "cum": cum,
+        entries.append({"title": r["movie_nm"] or r["movie_cd"], "audi": audi, "cum": cum,
                          "own": False, "found": r.get("found") == "1"})
 
-    entries.sort(key=lambda e: (e["rate"] is None, -(e["rate"] or 0)))
+    entries.sort(key=lambda e: (e["audi"] is None, -(e["audi"] or 0)))
 
     if len(entries) <= 1:
         return '<div class="chart-empty">등록된 경쟁작이 없습니다</div>'
@@ -244,16 +245,16 @@ def competitor_table(rows: list, own_title: str, own_rate, own_cum) -> str:
     rows_html = []
     for e in entries:
         row_cls = "cmp-row cmp-row--own" if e["own"] else "cmp-row"
-        rate_txt = f'{e["rate"]:.1f}%' if e["rate"] is not None else "—"
+        audi_txt = fmt_num(e["audi"]) + "명" if e["audi"] is not None else "—"
         cum_txt = fmt_num(e["cum"]) + "명" if e["cum"] is not None else "—"
         status = "" if e["found"] else '<span class="cmp-pending">집계 전</span>'
         rows_html.append(
             f'<tr class="{row_cls}"><td class="cmp-title">{html_escape(e["title"])}{status}</td>'
-            f'<td class="cmp-num">{rate_txt}</td><td class="cmp-num">{cum_txt}</td></tr>'
+            f'<td class="cmp-num">{audi_txt}</td><td class="cmp-num">{cum_txt}</td></tr>'
         )
 
     return f'''<table class="cmp-table">
-  <thead><tr><th>영화</th><th>실시간 예매율</th><th>누적관객수</th></tr></thead>
+  <thead><tr><th>영화</th><th>예매관객수</th><th>누적관객수</th></tr></thead>
   <tbody>{"".join(rows_html)}</tbody>
 </table>'''
 
@@ -344,15 +345,15 @@ def build() -> None:
         status_badge = f'<span class="badge badge--live">개봉 {abs(d_day)}일차</span>'
 
     competitor_rows = load_competitor_rows()
-    own_rate = None
+    own_audi = None
     if HOURLY.exists():
         with open(HOURLY, encoding="utf-8-sig", newline="") as f:
             last_found = None
             for row in csv.DictReader(f):
                 if row.get("movie_cd") == movie_cd and row.get("found") == "1":
                     last_found = row
-            if last_found and last_found.get("reservation_rate"):
-                own_rate = float(last_found["reservation_rate"])
+            if last_found and last_found.get("reservation_audi"):
+                own_audi = int(last_found["reservation_audi"])
     own_cum = daily_series[-1]["cum_audi"] if daily_series else (
         latest_snapshot["reservation_audi"] if latest_snapshot else None
     )
@@ -517,7 +518,7 @@ def build() -> None:
 
   <div class="section">
     <h2>경쟁작 현황</h2>
-    <div class="card">{competitor_table(competitor_rows, target["title"], own_rate, own_cum)}</div>
+    <div class="card">{competitor_table(competitor_rows, target["title"], own_audi, own_cum)}</div>
   </div>
 
   <footer>

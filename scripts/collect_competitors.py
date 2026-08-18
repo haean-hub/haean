@@ -111,19 +111,25 @@ def main() -> None:
 
     now = datetime.datetime.now().replace(microsecond=0).isoformat()
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        page = browser.new_page(user_agent="Mozilla/5.0")
-        page.on("dialog", lambda d: d.accept())
+    all_rows = None
+    for attempt in range(1, 3 + 1):
         try:
-            all_rows = fetch_all_rows(page)
+            with sync_playwright() as p:
+                browser = p.chromium.launch()
+                try:
+                    page = browser.new_page(user_agent="Mozilla/5.0")
+                    page.on("dialog", lambda d: d.accept())
+                    all_rows = fetch_all_rows(page)
+                finally:
+                    browser.close()
+            break
         except Exception as e:
-            log(f"ERROR fetch failed: {e}")
-            browser.close()
-            return
-        browser.close()
+            log(f"ERROR attempt{attempt} browser/fetch failed: {type(e).__name__}: {e}")
+            if attempt < 3:
+                time.sleep(5)
 
     if all_rows is None:
+        log("FAIL 재시도 후에도 실패 -> 이번 수집 건너뜀")
         return
 
     by_cd = {r["movieCd"]: r for r in all_rows if r["movieCd"]}
