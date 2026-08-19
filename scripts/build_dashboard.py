@@ -31,6 +31,19 @@ DEFAULT_AI_COMMENT = {
 SERIES_1 = "var(--series-1)"  # blue  — 대상 영화
 SERIES_2 = "var(--series-2)"  # aqua  — 벤치마크/비교
 
+# 경쟁작 예매관객수 추이 차트용 고정 순서 카테고리컬 팔레트(최대 7개: 대상작 1 + 경쟁작 6).
+# Node.js 검증 스크립트를 이 환경에서 못 돌려서(로그 참고), 색상환 위 ~50-55도 간격 배치 +
+# 어두운 배경(#0c1918) 대비 확보(밝은 톤)로 수동 검증했다. 순서 고정, 절대 순환/재사용 금지.
+CMP_PALETTE = [
+    "#e0574c",  # 대상작(고정, --series-1과 동일)
+    "#2dd4bf",  # 경쟁작 1(고정, --series-2와 동일)
+    "#f2b84b",  # 경쟁작 2 amber
+    "#8fd14f",  # 경쟁작 3 green
+    "#5aa9e6",  # 경쟁작 4 sky blue
+    "#a78bfa",  # 경쟁작 5 violet
+    "#f472b6",  # 경쟁작 6 pink
+]
+
 
 def load_config() -> dict:
     with open(CONFIG_PATH, encoding="utf-8") as f:
@@ -225,6 +238,110 @@ def load_competitor_rows() -> list:
     return list(latest.values())
 
 
+def load_competitor_history() -> dict:
+    """movie_cd -> [(datetime, reservation_audi), ...] (found=1 행만, 시간순)."""
+    if not COMPETITORS_PATH.exists():
+        return {}
+    out = {}
+    with open(COMPETITORS_PATH, encoding="utf-8-sig", newline="") as f:
+        for row in csv.DictReader(f):
+            if row.get("found") != "1" or not row.get("reservation_audi"):
+                continue
+            try:
+                dt = datetime.datetime.fromisoformat(row["collected_at"])
+            except ValueError:
+                continue
+            out.setdefault(row["movie_cd"], []).append((dt, int(row["reservation_audi"])))
+    for cd in out:
+        out[cd].sort(key=lambda p: p[0])
+    return out
+
+
+def load_own_reservation_history(movie_cd: str) -> list:
+    """대상작 자체의 예매관객수 추이(hourly.csv, found=1 행만)."""
+    if not HOURLY.exists():
+        return []
+    out = []
+    with open(HOURLY, encoding="utf-8-sig", newline="") as f:
+        for row in csv.DictReader(f):
+            if row.get("movie_cd") != movie_cd or row.get("found") != "1" or not row.get("reservation_audi"):
+                continue
+            try:
+                dt = datetime.datetime.fromisoformat(row["collected_at"])
+            except ValueError:
+                continue
+            out.append((dt, int(row["reservation_audi"])))
+    out.sort(key=lambda p: p[0])
+    return out
+
+
+def svg_categorical_line_chart(named_series: list, width=680, height=280) -> str:
+    """named_series: [(name, color, [(datetime, value), ...]), ...]. 값이 있는 시리즈만 그린다.
+    범례는 항상 표시(dataviz 스킬: 2개 이상 시리즈는 범례 필수, 5개 이상이면 직접 라벨 대신 범례만)."""
+    plotted = [(name, color, pts) for name, color, pts in named_series if len(pts) >= 1]
+    if not plotted:
+        return '<div class="chart-empty">데이터가 아직 충분하지 않습니다</div>'
+
+    pad_l, pad_r, pad_t, pad_b = 46, 16, 16, 28
+    plot_w = width - pad_l - pad_r
+    plot_h = height - pad_t - pad_b
+
+    all_x = [p[0] for _, _, pts in plotted for p in pts]
+    all_v = [p[1] for _, _, pts in plotted for p in pts]
+    xmin, xmax = min(all_x), max(all_x)
+    vmin, vmax = 0, max(all_v) if all_v else 1
+    if vmax == 0:
+        vmax = 1
+    x_span = (xmax - xmin).total_seconds() or 1
+
+    def x_of(dt):
+        return pad_l + ((dt - xmin).total_seconds() / x_span) * plot_w
+
+    def y_of(v):
+        return pad_t + plot_h - (v / vmax) * plot_h
+
+    ticks = nice_ticks(0, vmax, 3)
+    grid_svg = "".join(
+        f'<line x1="{pad_l}" y1="{y_of(t):.1f}" x2="{width-pad_r}" y2="{y_of(t):.1f}" class="gridline"></line>'
+        f'<text x="{pad_l-8}" y="{y_of(t)+3:.1f}" class="axis-label" text-anchor="end">{fmt_num(t)}</text>'
+        for t in ticks
+    )
+    labels_svg = "".join(
+        f'<text x="{x_of(dt):.1f}" y="{height-8}" class="axis-label" text-anchor="middle">{dt.strftime("%m/%d")}</text>'
+        for dt in (xmin, xmax)
+    )
+
+    legend_svg = "".join(
+        f'<span class="legend-item"><span class="legend-swatch" style="background:{color}"></span>{html_escape(name)}</span>'
+        for name, color, _ in plotted
+    )
+
+    lines_svg = ""
+    for name, color, pts in plotted:
+        if len(pts) >= 2:
+            path_d = " ".join(f"{'M' if i == 0 else 'L'}{x_of(dt):.1f},{y_of(v):.1f}" for i, (dt, v) in enumerate(pts))
+            lines_svg += f'<path d="{path_d}" fill="none" stroke="{color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>'
+        last_dt, last_v = pts[-1]
+        tip = f"{name} {last_dt.strftime('%m/%d %H:%M')} {fmt_num(last_v)}명"
+        lines_svg += (
+            f'<circle cx="{x_of(last_dt):.1f}" cy="{y_of(last_v):.1f}" r="4" fill="{color}" '
+            f'stroke="var(--surface-1)" stroke-width="2"><title>{html_escape(tip)}</title></circle>'
+        )
+        for dt, v in pts[:-1]:
+            tip = f"{name} {dt.strftime('%m/%d %H:%M')} {fmt_num(v)}명"
+            lines_svg += (
+                f'<circle cx="{x_of(dt):.1f}" cy="{y_of(v):.1f}" r="8" fill="transparent" class="hover-dot">'
+                f'<title>{html_escape(tip)}</title></circle>'
+            )
+
+    return f'''<div class="chart-legend">{legend_svg}</div>
+<svg viewBox="0 0 {width} {height}" class="chart-svg" role="img" aria-label="경쟁작 예매관객수 추이">
+  {grid_svg}
+  {lines_svg}
+  {labels_svg}
+</svg>'''
+
+
 def competitor_table(rows: list, own_title: str, own_audi, own_cum) -> str:
     """경쟁작 비교는 색상 6개 이상이 겹쳐 선그래프보다 표가 더 읽기 쉬워 표로 낸다.
     실시간 예매율(%)은 개봉 전 비교 시 체감이 잘 안 돼서, 실제 인원수인 예매관객수로 비교한다."""
@@ -357,6 +474,14 @@ def build() -> None:
     own_cum = daily_series[-1]["cum_audi"] if daily_series else (
         latest_snapshot["reservation_audi"] if latest_snapshot else None
     )
+
+    # 경쟁작 예매관객수 추이 차트: 대상작(팔레트[0]) + config 등록 순서대로 경쟁작에 색 고정 배정
+    competitor_history = load_competitor_history()
+    own_history = load_own_reservation_history(movie_cd)
+    cmp_named_series = [(target["title"], CMP_PALETTE[0], own_history)]
+    for i, comp in enumerate(config.get("competitor_movies", [])):
+        color = CMP_PALETTE[(i + 1) % len(CMP_PALETTE)]
+        cmp_named_series.append((comp["title"], color, competitor_history.get(comp["movie_cd"], [])))
 
     generated_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -519,6 +644,11 @@ def build() -> None:
   <div class="section">
     <h2>경쟁작 현황</h2>
     <div class="card">{competitor_table(competitor_rows, target["title"], own_audi, own_cum)}</div>
+  </div>
+
+  <div class="section">
+    <h2>경쟁작 예매관객수 추이</h2>
+    <div class="card">{svg_categorical_line_chart(cmp_named_series)}</div>
   </div>
 
   <footer>
