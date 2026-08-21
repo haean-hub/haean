@@ -10,10 +10,13 @@ import csv
 import datetime
 import json
 import re
+import sys
 import time
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
+
+from kobis_browser import launch_chromium
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = ROOT / "config" / "film_config.json"
@@ -115,7 +118,7 @@ def main() -> None:
     for attempt in range(1, 3 + 1):
         try:
             with sync_playwright() as p:
-                browser = p.chromium.launch()
+                browser = launch_chromium(p)
                 try:
                     page = browser.new_page(user_agent="Mozilla/5.0")
                     page.on("dialog", lambda d: d.accept())
@@ -130,7 +133,7 @@ def main() -> None:
 
     if all_rows is None:
         log("FAIL 재시도 후에도 실패 -> 이번 수집 건너뜀")
-        return
+        sys.exit(1)
 
     by_cd = {r["movieCd"]: r for r in all_rows if r["movieCd"]}
     rows = []

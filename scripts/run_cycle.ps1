@@ -13,11 +13,20 @@ function Write-Log($msg) {
 
 Set-Location $root
 
+# 작업 스케줄러의 세션 컨텍스트에서는 %LOCALAPPDATA%가 대화형 로그인 때와 다르게
+# 풀리는 경우가 있어(모니터만 끄고 로그아웃은 안 한 상태 등), Playwright가 브라우저
+# 실행파일을 못 찾는 문제가 3일간 조용히 발생했었다(collect_competitors.py, collect_company_stat.py
+# 둘 다 exit=0인데 실제로는 매 사이클 재시도 끝에 실패). 경로를 고정 지정해서 이 의존성을 없앤다.
+$env:PLAYWRIGHT_BROWSERS_PATH = "C:\Users\admin\AppData\Local\ms-playwright"
+
 python scripts\collect_hourly.py
 Write-Log "collect_hourly.py exit=$LASTEXITCODE"
 
 python scripts\collect_daily.py
 Write-Log "collect_daily.py exit=$LASTEXITCODE"
+
+python scripts\collect_company_stat.py
+Write-Log "collect_company_stat.py exit=$LASTEXITCODE"
 
 python scripts\collect_competitors.py
 Write-Log "collect_competitors.py exit=$LASTEXITCODE"
